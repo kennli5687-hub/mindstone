@@ -1,0 +1,28 @@
+<!doctype html><html lang="en">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mindstone progressive loader QA</title>
+<link rel="stylesheet" href="/atlas.css">
+<style>body{background:#172541;color:#f6eddf;font:16px system-ui;margin:24px}.story-atlas{max-width:700px;padding:16px}.atlas-viewport{height:380px}nav{display:flex;gap:8px}nav button{padding:12px}</style>
+<h1>Progressive loader — controlled module delivery</h1>
+<p>Controls delay or reject a module promise. The delivered renderer is the actual production module; this is not network throttling.</p>
+<nav><button id="release">Deliver module in 3 seconds</button><button id="reject">Fail current request</button><button id="leave">Leave preview</button><button id="restart">Start fresh preview</button></nav>
+<p id="result" role="status">Waiting for module delivery</p>
+<div class="story-atlas"></div>
+<script type="module">
+import {loadStoryAtlas} from '/src/storyAtlasLoader.js';
+const host=document.querySelector('.story-atlas'),result=document.querySelector('#result');
+let pending=[],preview,requests=0;
+function mount(){
+  preview?.destroy();
+  preview=loadStoryAtlas(host,{onSelect(id){result.textContent=`Selected ${id}`;}},()=>new Promise((resolve,reject)=>{pending.push({resolve,reject});requests++;result.textContent=`Request ${requests} pending`;}));
+}
+document.querySelector('#release').onclick=()=>{
+  const request=pending.shift();if(!request){result.textContent='No pending request';return;}
+  result.textContent='Delivering in three seconds';
+  setTimeout(async()=>{try{request.resolve(await import('/src/storyAtlas.js'));}catch(error){request.reject(error);}},3000);
+};
+document.querySelector('#reject').onclick=()=>pending.shift()?.reject(new Error('Controlled module delivery failure'));
+document.querySelector('#leave').onclick=()=>{preview.destroy();result.textContent='Preview closed';};
+document.querySelector('#restart').onclick=mount;
+mount();
+</script></html>

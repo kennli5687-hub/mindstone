@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mindstone frame pacing QA</title>
+<link rel="stylesheet" href="/atlas.css">
+<style>
+body{background:#172541;color:#f6eddf;font:16px system-ui;margin:24px}
+button#measure{padding:12px;margin:12px 0}.story-atlas{max-width:700px;padding:16px}.atlas-viewport{height:380px}
+pre{white-space:pre-wrap;font-size:13px}h1{font-size:24px}
+</style>
+<h1>Story renderer — frame pacing</h1>
+<p>Two-second warm-up, configurable sample. Measures animation-frame delivery, not GPU execution time. Keep this tab visible.</p>
+<fieldset><legend>Sample duration</legend><label><input type="radio" name="duration" value="10" checked>10 seconds</label> <label><input type="radio" name="duration" value="60">60 seconds</label></fieldset>
+<button id="measure">Measure current chapter</button>
+<pre id="report" role="status">Choose a chapter, then measure.</pre>
+<div class="story-atlas"></div>
+<script type="module">
+import {createStoryAtlas} from '/src/storyAtlas.js';
+const host=document.querySelector('.story-atlas'),button=document.querySelector('#measure'),report=document.querySelector('#report');
+createStoryAtlas(host);
+let running=false,frame=0;
+function cancel(reason){running=false;cancelAnimationFrame(frame);button.disabled=false;report.textContent=reason;}
+document.addEventListener('visibilitychange',()=>{if(running&&document.hidden)cancel('Measurement cancelled: tab became hidden.');});
+button.onclick=()=>{
+  if(running)return;
+  const canvas=host.querySelector('canvas');
+  if(!canvas||canvas.hidden||host.querySelector('.atlas-loading').textContent){report.textContent='Wait for the 3D model to load before measuring.';return;}
+  const sampleMs=Number(document.querySelector('[name="duration"]:checked').value)*1000;
+  running=true;button.disabled=true;report.textContent='Warming up for two seconds…';
+  let start=0,last=0,measureStart=0,startRenders=0;
+  const samples=[],chapter=host.dataset.selectedStory;
+  const rect=canvas.getBoundingClientRect();
+  function tick(t){
+    if(!running)return;
+    if(document.hidden||chapter!==host.dataset.selectedStory||canvas.hidden){cancel('Measurement cancelled: scene or visibility changed.');return;}
+    if(!start)start=t;
+    if(t-start>=2000){
+      if(!measureStart){measureStart=t;startRenders=Number(host.dataset.renderCount);report.textContent=`Measuring ${sampleMs/1000} seconds of continuous animation…`;}
+      if(last)samples.push(t-last);
+      last=t;
+      if(t-measureStart>=sampleMs){
+        const sorted=[...samples].sort((a,b)=>a-b),duration=t-measureStart;
+        const percentile=p=>Number(sorted[Math.min(sorted.length-1,Math.floor(sorted.length*p))].toFixed(2));
+        const data={chapter,canvasCSS:[Math.round(rect.width),Math.round(rect.height)],canvasPixels:[canvas.width,canvas.height],sampleSeconds:Number((duration/1000).toFixed(2)),frames:samples.length,deliveredFPS:Number((samples.length*1000/duration).toFixed(2)),medianMs:percentile(.5),p95Ms:percentile(.95),p99Ms:percentile(.99),over25msPercent:Number((100*samples.filter(n=>n>25).length/samples.length).toFixed(2)),renderedFrames:Number(host.dataset.renderCount)-startRenders,drawCalls:Number(host.dataset.drawCalls),triangles:Number(host.dataset.triangles)};
+        data.maxFrameMs=Number(sorted.at(-1).toFixed(2));
+        data.over50msCount=samples.filter(n=>n>50).length;
+        running=false;button.disabled=false;report.textContent=JSON.stringify(data,null,2);return;
+      }
+    }
+    frame=requestAnimationFrame(tick);
+  }
+  frame=requestAnimationFrame(tick);
+};
+</script>
+</html>

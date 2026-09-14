@@ -1,0 +1,136 @@
+:root { --text:#19265e; --muted:#575b7a; --accent:#e05e68; --accent-2:#344dae; --border:#9ca9df45; }
+/* Illustrated moon-city landing page. Text remains live HTML for accessibility. */
+.moon-home{position:relative;isolation:isolate;min-height:430px;height:100%;background:linear-gradient(90deg,#101b43e8 0%,#152149a6 40%,#13204408 75%),url('/assets/moon-home.png') center/cover!important;display:flex!important;align-items:center;border:1px solid #e9cc8566;border-radius:24px;overflow:hidden}
+.moon-home-copy{position:relative;z-index:1;padding:clamp(24px,4vw,64px);max-width:720px;color:#fff3d8}
+.moon-learning-path{list-style:none;padding:0;margin:22px 0 26px;display:grid;gap:12px;color:#e4e7f3;font-size:14px;line-height:1.5}
+.moon-learning-path li{padding-left:14px;border-left:2px solid #e8c88870}
+.moon-learning-path span{display:block;color:#f3d69b;font-size:10px;letter-spacing:.12em;margin-bottom:2px;font-weight:700}
+.moon-home .moon-scope-note{font-size:11px;color:#c3cce0;margin:14px 0 0;line-height:1.5}
+.moon-home .moon-home-note{line-height:1.6;letter-spacing:.08em}
+.dashboard-layout .viewer-frame.moon-home{width:100%!important;max-width:100%!important;aspect-ratio:auto!important;box-sizing:border-box}
+.library-panel .category-list .category-card .category-header .library-copy{justify-items:start!important;text-align:left!important}
+.library-panel .category-list .category-card .category-symbol{font-size:0!important}
+.moon-eyebrow,.moon-home-note,.moon-world-label{font-size:11px;letter-spacing:.19em;font-weight:700;color:#eed39a}
+.moon-home h1{font-family:Georgia,serif;font-size:clamp(30px,3.5vw,52px);line-height:1.12;font-weight:400;letter-spacing:-.025em;margin:18px 0}
+.dashboard-layout .viewer-stage:has(.moon-learning-path){overflow:visible;height:auto}
+.dashboard-layout .moon-home:has(.moon-learning-path){height:auto;min-height:100%}
+.moon-home p{color:#e4e7f3;font-size:16px;line-height:1.7;margin-bottom:25px}
+.moon-cta{padding:15px 24px!important;border-radius:12px!important;background:linear-gradient(135deg,#f8d793,#e8ac70)!important;color:#34284b!important;border:1px solid #fff0c5!important;box-shadow:0 5px 25px #efbb5b35;font-weight:750}
+.moon-cta span{margin-left:25px}.moon-home-note{display:block;margin-top:23px;font-size:10px}.moon-world-label{position:absolute;bottom:23px;right:25px;text-shadow:0 2px 6px #101c40}
+.dashboard-layout .viewer-stage{padding:0;overflow:hidden;min-height:430px;background:#152248;border-radius:24px}
+.dashboard-layout .workspace-column{grid-template-rows:minmax(430px,1fr) auto}
+.dashboard-layout .deck-card{background:linear-gradient(110deg,#142347e8,#263361d9),url('/assets/moon-home.png') center 80%/cover;border:1px solid #cbb57666;padding:18px;border-radius:22px}
+.dashboard-layout .deck-card>.row .title{color:#f8e6bd;font-family:Georgia,serif;font-size:21px;font-weight:400}
+.dashboard-layout .bottom-card{position:relative;isolation:isolate;min-height:155px!important;height:auto!important;padding:24px!important;border:1px solid #e7c77b88;border-radius:17px;background:linear-gradient(90deg,#19244be8,#26325f44),url('/assets/moon-home.png') center 65%/cover!important;box-shadow:inset 0 0 0 4px #efdcaa0c,0 8px 20px #090f2929;overflow:hidden;transition:transform .2s,border-color .2s}
+.dashboard-layout .bottom-card[data-action="open-scenario"]{background-image:linear-gradient(90deg,#172344ee,#17234438),url('/assets/scenario-storybook.png')!important;background-position:center!important}
+.dashboard-layout .bottom-card[data-action="open-explore"]{background-image:linear-gradient(90deg,#172344ee,#17234420),url('/assets/explore-gateway.png')!important;background-position:center!important}
+.dashboard-layout .bottom-card:hover{transform:translateY(-3px);border-color:#ffe4a0}
+.dashboard-layout .bottom-card .explore-card-orbit{display:none}
+.dashboard-layout .bottom-card .title{font-family:Georgia,serif;color:#fff0ce!important;font-size:29px!important;font-weight:400}.dashboard-layout .bottom-card .muted{color:#e1e6f5!important;font-size:13px;max-width:260px;line-height:1.5}.dashboard-layout .bottom-card-label{position:relative;z-index:2}.dashboard-layout .explore-card-orbit{opacity:.3}
+.library-panel .category-list .category-card{background-image:linear-gradient(100deg,#f5ead5f5,#ece7e5ce),url('/assets/moon-home.png')!important;background-size:cover!important;background-position:30% 45%!important;border-color:#e4ca9580!important}
+.library-panel .category-list .category-card:nth-child(2){background-image:linear-gradient(100deg,#cce9e3f5,#cce9e3b0),url('/assets/moon-home.png')!important;background-position:60% 20%!important}
+.library-panel .category-list .category-card:nth-child(3){background-image:linear-gradient(100deg,#efc7bff5,#efc7bfba),url('/assets/moon-home.png')!important;background-position:80% 65%!important}
+.library-panel .category-list .category-card:nth-child(4){background-image:linear-gradient(100deg,#f7e0adf5,#f7e0adbb),url('/assets/moon-home.png')!important;background-position:95% 15%!important}
+.library-panel.stack{background:linear-gradient(#172751e8,#182649ed),url('/assets/moon-home.png') center/cover}
+.moon-intro{padding:24px;text-align:center;color:#f9e5bd}.moon-intro video{display:block;width:100%;max-width:850px;max-height:60dvh;margin:20px auto;border-radius:18px;background:#0e1733}.moon-intro p{line-height:1.6}
+@media(max-width:700px){.moon-home,.dashboard-layout .viewer-stage{min-height:380px}.moon-home-copy{padding:24px}.moon-home p{font-size:14px}.moon-world-label{display:none}.dashboard-layout .bottom-card{padding:16px!important}.dashboard-layout .workspace-column{grid-template-rows:auto auto}}
+@media(prefers-reduced-motion:reduce){.dashboard-layout .bottom-card{transition:none}.dashboard-layout .bottom-card:hover{transform:none}}
+body { background:radial-gradient(ellipse at 15% 10%,#6452af88,transparent 40%),radial-gradient(ellipse at 95% 85%,#ef786844,transparent 35%),#101943; }
+.demo-shell { grid-template-rows:auto minmax(0,1fr); gap:18px; }
+.dream-header { display:flex; align-items:center; justify-content:space-between; gap:18px; padding:10px 12px; color:#c0cbee; }
+.dream-brand { font-size:22px; font-weight:900; letter-spacing:.13em; text-decoration:none; color:#fff3d3; }
+.dream-header > span { font-size:13px; }
+.dream-header button { color:#a0f3de; background:#253770; border-color:#74dcc757; }
+.dashboard-layout { grid-template-columns:minmax(205px,.65fr) minmax(340px,2.8fr); }
+.dashboard-layout .bottom-cards { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.library-panel,.info-rail { background:#1c2b60; border:1px solid #92a5e13b; border-radius:24px; overflow:auto; }
+.library-panel .stage-header .title { color:#fff3d3; font-size:20px; }
+.library-panel .stage-header .muted { color:#b4c4e8; }
+.library-panel .library-list { overflow:visible; }
+.category-card { background:#e6e0fa; border-radius:20px; }
+.category-card:nth-child(2) { background:#ccece5; }
+.category-card:nth-child(3) { background:#f6c9bd; }
+.category-card:nth-child(4) { background:#ffe8b9; }
+.category-states { max-height:none!important; opacity:1!important; visibility:visible!important; position:relative!important; transform:none!important; pointer-events:auto!important; }
+/* Native disclosure cards: content determines height, never hover/flex squeezing. */
+.library-panel.stack { display:flex; flex-direction:column; overflow:hidden; }
+.library-panel .stage-header { flex:0 0 auto; }
+.library-panel .library-list.category-list { flex:1 1 auto; height:auto; overflow-y:auto; overflow-x:hidden; padding:4px 5px 12px; scrollbar-gutter:stable; }
+.library-panel .category-list .category-card { display:block; flex:0 0 auto!important; min-height:0; padding:14px; overflow:visible; transition:border-color .15s; }
+.library-panel .category-card::after { display:none; }
+.library-panel .category-list .category-card .category-header { display:grid; grid-template-columns:32px minmax(0,1fr) 20px!important; grid-template-areas:"icon copy symbol"!important; min-height:0!important; gap:10px; align-content:start; justify-items:stretch; text-align:left; cursor:pointer; list-style:none; }
+.library-panel .category-header::-webkit-details-marker { display:none; }
+.library-panel .category-list .category-card .category-header .library-copy { min-width:0; justify-items:start; display:grid; gap:6px; }
+.library-panel .category-list .category-card .category-header .title { font-size:17px; line-height:1.25; overflow-wrap:normal; }
+.library-panel .category-list .category-card .category-header .muted.small { font-size:13px; line-height:1.4; }
+.library-panel .category-list .category-card .category-icon { width:32px; height:32px; font-size:14px; align-self:start; }
+.library-panel .category-list .category-card .category-count { display:none; }
+.library-panel .category-list .category-card .category-symbol { display:block; font-size:0; align-self:start; }
+.library-panel .category-symbol::after { content:'⌄'; font-size:20px; }
+.library-panel details[open] .category-symbol::after { content:'⌃'; }
+.library-panel details:not([open]) .category-states { display:none!important; }
+.library-panel details[open] .category-states { display:grid; gap:10px; padding-top:14px; align-content:start; }
+.library-panel .category-state-image-button { display:block; height:auto; min-height:0; border-radius:12px; background:#fff6e6; }
+.library-panel .category-state-image { height:auto; aspect-ratio:16/9; object-fit:contain; border-radius:12px 12px 0 0; }
+.library-panel .state-caption { display:block; padding:8px; font-size:14px; font-weight:700; color:#283b50; }
+.library-panel summary:focus-visible,.library-panel button:focus-visible { outline:3px solid #ed826d; outline-offset:3px; }
+.category-state-image-button.active { outline:3px solid #ee7a69; outline-offset:2px; }
+.workspace-column { grid-template-rows:minmax(0,1fr) auto; }
+.viewer-stage { background:#263773; border-radius:24px; overflow:hidden; }
+.viewer-frame { height:100%; aspect-ratio:auto; min-height:220px; }
+.specimen-video { background:#19265e; }
+.deck-card { background:#202e66; border:1px solid #a1b2df44; padding:18px; }
+.deck-card > .row .title { color:#fff3d3; }
+.bottom-card { min-height:155px; background:linear-gradient(140deg,#e6e2fc,#c7d4fb); border-radius:19px; }
+.bottom-card:nth-child(2) { background:linear-gradient(140deg,#ffe4b1,#ffb799); }
+.bottom-card .title { font-size:23px; }
+.explore-card { background:radial-gradient(circle at 80% 10%,#70e9e888,transparent 40%),linear-gradient(135deg,#4645a1,#b45b9c); }
+.info-rail { position:static; max-height:none; }
+.info-empty,.info-hero,.info-section,.info-thought,.effect-card { background:#f2edff; border-radius:17px; padding:14px; }
+.info-thought { background:#d2f2e9; }
+.effect-card.short { background:#fff0be; }
+.effect-card.long { background:#f6cfc8; }
+.info-rail p,.icon-list div { font-size:13px; line-height:1.5; }
+.quiz-modal,.scenario-modal { background:linear-gradient(145deg,#fcf3db,#e9e1fc); border-radius:24px; overflow:auto; }
+.quiz-overlay,.scenario-overlay { background:#080f3aca; backdrop-filter:blur(10px); }
+.quiz-option { background:#ffffff99; color:#19265e; padding:15px; }
+.quiz-option.correct-answer { background:#bcf3dc; border:2px solid #278b76; }
+.quiz-option.incorrect { background:#ffd5cf; border:2px solid #bd4e61; }
+.quiz-feedback { line-height:1.55; }
+.knowledge-reward { padding:10px 14px; background:#dedcf9; border-radius:12px; color:#3c4591; }
+button.primary { background:linear-gradient(130deg,#5965ca,#8c53b1); }
+button:focus-visible,a:focus-visible,summary:focus-visible { outline:3px solid #e88c45; outline-offset:3px; }
+.room-unlocks button { display:block; width:100%; margin-top:8px; font-size:13px; background:#ffffff88; color:#243674; }
+.practice-card { padding:14px; background:#d1f0e4; border:1px solid #72b9a5; border-radius:15px; }
+.practice-card h3 { margin:0; }
+.practice-card p,.room-care { font-size:13px; line-height:1.6; }
+.practice-card small { display:block; margin-top:8px; }
+.room-care a { color:#3546a1; }
+.fog-panel-kicker { color:#3c6b78; }
+.fog-panel-message { margin-top:0; }
+.explore-panel { gap:18px; }
+summary { cursor:pointer; font-size:13px; font-weight:700; }
+/* Calm editorial home; intrinsic block flow prevents the hero overlapping cards. */
+body:has(.moon-home){overflow:auto;background:#141f3c}
+.app-shell:has(.moon-home){height:auto;min-height:100dvh;overflow:visible}
+.demo-shell:has(.moon-home){height:auto;overflow:visible}
+.dashboard-layout:has(.moon-home){height:auto;align-items:start}
+.dashboard-layout .workspace-column:has(.moon-home){display:flex;flex-direction:column;height:auto;min-height:0;gap:24px;overflow:visible}
+.dashboard-layout .viewer-stage:has(.moon-home){flex:none;aspect-ratio:auto;min-height:0;height:auto;overflow:hidden;border:1px solid #d9dfdf;background:#f4f2eb}
+.dashboard-layout .viewer-frame.moon-home{display:block!important;background:#f4f2eb!important;color:#23374b;border:0;min-height:0!important;height:auto!important;aspect-ratio:auto!important;overflow:visible}
+.moon-home .moon-home-copy{max-width:850px;padding:clamp(24px,3vw,44px);color:#23374b}
+.moon-home .moon-eyebrow{color:#687b80;font-size:10px;letter-spacing:.14em}
+.moon-home h1{color:#23374b;font-size:clamp(30px,3vw,46px);line-height:1.15;margin:20px 0}
+.moon-home p{color:#536574;font-size:15px;line-height:1.7;margin-bottom:18px;max-width:650px}
+.moon-home .moon-learning-path{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;color:#536574;margin:24px 0;font-size:13px}
+.moon-home .moon-learning-path li{border-color:#b9cac8;padding-left:12px}.moon-home .moon-learning-path span{color:#547673;font-size:10px}
+.moon-home .moon-cta{background:#305c60!important;color:#fff!important;border-color:#305c60!important;box-shadow:none;padding:12px 20px!important}
+.moon-home .moon-home-note{color:#60787b;font-size:9px;margin-top:18px}.moon-home .moon-scope-note{color:#77868a;font-size:11px;margin:10px 0 0}
+.dashboard-layout .deck-card{flex:none;display:block;min-height:0;background:transparent;border:0;padding:0;overflow:visible}
+.dashboard-layout .deck-card>.row{margin-bottom:14px}.dashboard-layout .deck-card>.row .title{font-family:inherit;font-size:17px;color:#dce2ea}
+.library-panel.stack{background:#1c2b46!important}.library-panel .category-list .category-card{background-image:none!important;background-color:#eeece5!important}
+.library-panel .category-list .category-card:nth-child(2){background-image:none!important;background-color:#dceae5!important}.library-panel .category-list .category-card:nth-child(3){background-image:none!important;background-color:#eeded8!important}.library-panel .category-list .category-card:nth-child(4){background-image:none!important;background-color:#eee5ce!important}
+@media(max-width:750px){.moon-home .moon-learning-path{grid-template-columns:1fr;gap:12px}.dashboard-layout .bottom-cards{grid-template-columns:1fr}}
+@media(max-width:1100px) { .dashboard-layout { grid-template-columns:190px minmax(300px,1fr); } .info-rail { grid-column:1/-1; } body { overflow:auto; } .app-shell { height:auto; min-height:calc(100dvh - 24px); overflow:visible; } .workspace-column { min-height:550px; } .dashboard-layout { height:auto; } .library-panel { height:auto; } }
+@media(max-width:900px) { .explore-body { grid-template-rows:340px auto; overflow:auto; } .explore-panel { max-height:none; min-height:0; overflow:visible; } .explore-world { min-height:340px; } .dream-header > span { display:none; } }
+@media(max-width:600px) { .dashboard-layout { display:flex; flex-direction:column; } .dream-header { flex-wrap:wrap; } .category-list { grid-template-columns:1fr 1fr; } .workspace-column { min-height:450px; } .bottom-cards { gap:7px; } .bottom-card { padding:10px; min-height:145px; } .bottom-card .title { font-size:18px; } .info-rail { overflow:visible; } .explore-world-badge { font-size:10px; right:10px; } }

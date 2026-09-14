@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mindstone WebGL recovery QA</title>
+<link rel="stylesheet" href="/atlas.css">
+<style>
+body{background:#172541;color:#f6eddf;font:16px system-ui;margin:24px}
+nav{display:flex;gap:12px;margin-bottom:20px}nav button{padding:12px}
+.story-atlas{max-width:700px;padding:16px}.atlas-viewport{height:380px}
+</style>
+<h1>WebGL context recovery — local QA</h1>
+<p>This page uses the production story renderer and the browser’s real context-loss extension.</p>
+<nav><button id="lose">Lose WebGL context</button><button id="restore">Restore WebGL context</button><button id="dispose">Dispose preview</button><button id="unavailable">Simulate unavailable WebGL</button></nav>
+<p id="result" role="status">Choose a chapter, then test loss and restoration.</p>
+<div class="story-atlas"></div>
+<script type="module">
+import {createStoryAtlas} from '/src/storyAtlas.js';
+const host=document.querySelector('.story-atlas');
+const result=document.querySelector('#result');
+const options={onStory(){result.textContent='Story navigation callback received';}};
+let preview=createStoryAtlas(host,options);
+let extension;
+document.querySelector('#lose').onclick=()=>{
+  const canvas=host.querySelector('canvas');
+  extension=canvas?.getContext('webgl2')?.getExtension('WEBGL_lose_context');
+  if(!extension){result.textContent='Context-loss extension unavailable';return;}
+  canvas.addEventListener('webglcontextlost',()=>{result.textContent='Actual WebGL context lost';},{once:true});
+  extension.loseContext();
+};
+document.querySelector('#restore').onclick=()=>{
+  host.querySelector('canvas')?.addEventListener('webglcontextrestored',()=>{result.textContent='Actual WebGL context restored';},{once:true});
+  extension?.restoreContext();
+};
+document.querySelector('#dispose').onclick=()=>{preview.destroy();result.textContent='Preview disposed';};
+document.querySelector('#unavailable').onclick=()=>{
+  preview.destroy();
+  // Test-only, synchronous denial of context creation; never shipped in main.
+  // Restore the original method even if initialization unexpectedly throws.
+  const original=HTMLCanvasElement.prototype.getContext;
+  try{
+    HTMLCanvasElement.prototype.getContext=function(type,...args){
+      return /webgl/i.test(type)?null:original.call(this,type,...args);
+    };
+    preview=createStoryAtlas(host,options);
+    result.textContent='Context creation denied for this preview only';
+  }finally{HTMLCanvasElement.prototype.getContext=original;}
+};
+</script>
+</html>

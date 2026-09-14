@@ -2,3 +2,11 @@ node_modules
 dist
 .vite
 *.log
+
+# Local Blender autosaves and duplicate render outputs
+*.blend1
+*.blend2
+*.png0001.png
+.DS_Store
+__pycache__/
+*.pyc

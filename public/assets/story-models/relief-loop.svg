@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="540" viewBox="0 0 900 540">
+<rect width="900" height="540" rx="24" fill="#f1dfb9"/>
+<rect x="20" y="20" width="860" height="500" rx="16" fill="none" stroke="#b58d50" stroke-width="4"/>
+<path d="M35 270H865" stroke="#d0ac70" stroke-width="2"/>
+<g fill="#253858" font-family="Georgia,serif" text-anchor="middle">
+<text x="450" y="76" font-size="30" letter-spacing="7">THE LETTER THAT WAITED</text>
+<text x="150" y="390" font-size="34">Worry</text><text x="450" y="390" font-size="34">Hiding</text><text x="750" y="390" font-size="34">Relief</text>
+<text x="150" y="431" font-size="17">“What if it goes wrong?”</text><text x="450" y="431" font-size="17">“I will do it tomorrow.”</text><text x="750" y="431" font-size="17">“Better… for a moment.”</text>
+<text x="450" y="492" font-size="19" letter-spacing="2">THE RELIEF CAN MAKE HIDING TEMPTING AGAIN.</text>
+</g>
+<g stroke="#253858" stroke-width="5" stroke-linejoin="round">
+<rect x="78" y="194" width="144" height="105" rx="8" fill="#fff1d2"/><path d="M78 194L150 249L222 194" fill="none"/>
+<path d="M111 174L98 145M150 164V130M189 174L205 145" stroke="#bd654b"/>
+<path d="M387 174H495L519 294H364Z" fill="#388b89"/><path d="M493 192C551 179 549 251 509 248" fill="none"/>
+<path d="M346 295H538L510 319H369Z" fill="#fff1d2"/>
+<path d="M692 290C628 275 651 224 681 224C672 171 749 164 761 212C816 187 850 268 801 290Z" fill="#a9cbbd"/>
+<path d="M717 243Q729 253 741 243M767 243Q779 253 791 243M737 265Q754 279 772 265" fill="none" stroke-width="3"/>
+<path d="M253 249H329L314 234M329 249L314 264M553 249H629L614 234M629 249L614 264" fill="none" stroke="#bd654b"/>
+</g></svg>

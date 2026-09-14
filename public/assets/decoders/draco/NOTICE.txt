@@ -1,0 +1,5 @@
+Draco glTF decoder assets copied from the installed Three.js package (0.185.1),
+examples/jsm/libs/draco/gltf. Draco is distributed under Apache License 2.0;
+see the accompanying LICENSE and https://github.com/google/draco.
+
+These files are served locally; no external CDN is required at runtime.

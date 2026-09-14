@@ -1,0 +1,14 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Moonstone repair flow QA</title>
+<link rel="stylesheet" href="/adventure.css">
+<style>body{margin:20px;background:#172541;color:#f6eddf;font:15px system-ui}main{display:grid;grid-template-columns:2fr 1fr;gap:16px}#world{height:540px;min-width:0}#panel{background:#f3ead8;color:#172541;padding:20px;border-radius:18px}#reload{padding:12px}canvas{display:block}pre{white-space:pre-wrap}</style>
+<h1>Repair flow — isolated progress</h1><p>This test uses in-memory storage. It never reads or writes your normal exploration progress.</p>
+<button id="reload">Reopen with test progress</button><pre id="progress" role="status">No test progress yet</pre>
+<main><div id="world"></div><div id="panel"></div></main>
+<script type="module">
+import {createContinuation} from '/src/adventure/continuation.js';
+const values=new Map(),progress=document.querySelector('#progress'),world=document.querySelector('#world'),panel=document.querySelector('#panel');
+const storage={getItem(key){return values.get(key)??null;},setItem(key,value){values.set(key,value);progress.textContent=`Test completed places: ${value}`;}};
+let handle;
+function mount(){handle?.destroy();handle=createContinuation(world,panel,{storage});}
+document.querySelector('#reload').onclick=mount;mount();
+</script></html>

@@ -1,0 +1,23 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Attic compression comparison</title>
+<style>body{margin:20px;background:#172541;color:#eee;font:15px system-ui}main{display:grid;grid-template-columns:1fr 1fr;gap:12px}canvas{width:100%;height:520px;display:block}pre{white-space:pre-wrap}</style>
+<h1>Original / compressed delivery comparison</h1><p>Same camera, lights and geometry. Compression candidate is not yet the production entrance.</p>
+<main><section><h2>Original</h2><div id="original"></div></section><section><h2>Compressed</h2><div id="candidate"></div></section></main><pre id="result">Loading both models…</pre>
+<script type="module">
+import * as THREE from 'three';
+import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
+import {DRACOLoader} from 'three/examples/jsm/loaders/DRACOLoader.js';
+const draco=new DRACOLoader().setDecoderPath('/assets/decoders/draco/').setWorkerLimit(2);
+const loader=new GLTFLoader().setDRACOLoader(draco);
+const scenes=[];
+async function view(id,path){
+ const host=document.querySelector('#'+id),renderer=new THREE.WebGLRenderer({antialias:true});
+ renderer.setPixelRatio(1);renderer.setSize(host.clientWidth,520);renderer.setClearColor('#172754');host.append(renderer.domElement);
+ const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(45,host.clientWidth/520,.1,100);camera.position.set(7,6,9);camera.lookAt(0,1,0);
+ scene.add(new THREE.HemisphereLight('#d7e5ff','#6463a1',2));const sun=new THREE.DirectionalLight('#ffe2b0',3);sun.position.set(2,7,4);scene.add(sun);
+ const gltf=await loader.loadAsync(path);scene.add(gltf.scene);renderer.render(scene,camera);scenes.push({scene,camera,renderer});
+ let triangles=0,meshes=0;gltf.scene.traverse(o=>{if(o.isMesh){meshes++;triangles+=(o.geometry.index?.count??o.geometry.attributes.position.count)/3;}});
+ const bounds=new THREE.Box3().setFromObject(gltf.scene);
+ return {id,meshes,triangles,min:bounds.min.toArray(),max:bounds.max.toArray()};
+}
+Promise.all([view('original','/assets/story-models/attic-storybook-v2.glb'),view('candidate','/assets/story-models/attic-delivery.glb')]).then(data=>{document.querySelector('#result').textContent=JSON.stringify(data,null,2);draco.dispose();}).catch(error=>{document.querySelector('#result').textContent=String(error);});
+</script></html>

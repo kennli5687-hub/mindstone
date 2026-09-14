@@ -1,3 +1,12 @@
+import { loadStoryAtlas } from './storyAtlasLoader.js';
+import { mountMobileTopicPicker } from './mobileTopicPicker.js';
+import { createLatestTask } from './latestTask.js';
+import { containModalFocus } from './modalFocus.js';
+import { createStoryReader } from "./adventure/reader.js";
+import { createMoonstoneReader } from "./adventure/moonstoneReader.js";
+import { readProgress } from "./adventure/progress.js";
+import { lessons, readLearning, earnKey } from "./learning.js";
+
 const blockerCatalog = [
   {
     id: "avoidance",
@@ -835,6 +844,7 @@ const skillTrees = {
 };
 
 const state = {
+  learning: readLearning(),
   mode: "dashboard",
   day: 1,
   xp: 0,
@@ -861,6 +871,8 @@ const state = {
   activeQuizQuestions: [],
   scenarioOpen: false,
   scenarioPageIndex: 0,
+  exploreOpen: false,
+  storyFromWorld: false,
 };
 
 function cloneBlockerCatalog() {
@@ -924,7 +936,7 @@ function prepareQuizQuestions(questions) {
 
 function createQuizSession() {
   const bankIndex = Math.floor(Math.random() * quizQuestionBanks.length);
-  return prepareQuizQuestions(quizQuestionBanks[bankIndex]);
+  return [...lessons.map(lesson => ({...lesson})), ...prepareQuizQuestions(quizQuestionBanks[bankIndex])];
 }
 
 function choosePath(id) {
@@ -989,6 +1001,74 @@ const avatarViewerState = {
 };
 
 let avatarViewerHandle = null;
+let fogRoomHandle = null;
+let storyHandle = null;
+let atlasHandle = null;
+let topicPickerHandle = null;
+let modalFocusHandle = null;
+let modalReturnSelector = '[data-action="open-scenario"]';
+function rememberModalEntry(){
+  if(state.scenarioOpen||state.exploreOpen||state.quizOpen)return;
+  const trigger=document.activeElement;
+  const action=trigger?.closest('[data-action]')?.dataset.action;
+  modalReturnSelector=action?`[data-action="${action}"]`:trigger?.hasAttribute('data-atlas-open')?'[data-atlas-topic="0"]':'[data-action="open-scenario"]';
+}
+function restoreModalEntry(){app.querySelector(modalReturnSelector)?.focus({preventScroll:true});}
+const fogLoadTask = createLatestTask();
+
+function disposeFogRoom() {
+  fogLoadTask.invalidate();
+  if (fogRoomHandle) {
+    fogRoomHandle.destroy();
+    fogRoomHandle = null;
+  }
+}
+
+async function mountFogRoom() {
+  const container = document.querySelector("[data-fog-room]");
+  const panel = document.querySelector("[data-fog-panel]");
+  if (!container || !panel) return;
+  container.innerHTML = '<div class="world-loading" role="status">Preparing the world…</div>';
+  panel.textContent = 'Your story continues here. Loading the interactive scene…';
+  return fogLoadTask.run({
+    load: () => import('./adventure/continuation.js'),
+    isActive: () => container.isConnected && state.exploreOpen,
+    commit: ({createContinuation}) => {
+  container.replaceChildren();
+  fogRoomHandle = createContinuation(container, panel, {
+    onStory(page) {
+      state.storyFromWorld = true;
+      state.scenarioPageIndex = page;
+      state.scenarioOpen = true;
+      state.exploreOpen = false;
+      render();
+    },
+    keys: state.learning.keys,
+    onQuiz: openQuiz,
+    onClose: closeExplore,
+    onComplete() {
+      state.journal.unshift({
+        day: state.day,
+        scenario: "The Fog Room",
+        blocker: "Avoidance",
+        tool: "Tiny Action",
+        note: "Explored how avoidance offers short-term relief and practiced one small step.",
+      });
+      if (state.journal.length > 12) state.journal.pop();
+    },
+  });
+    },
+    fail: (error, isCurrent) => {
+    container.innerHTML = '<div class="world-loading" role="alert">The world could not load.</div>';
+    panel.textContent = 'You can return to the story or try loading the world again.';
+    const retry = document.createElement('button');
+    retry.type = 'button';retry.textContent = 'Try again';
+    retry.addEventListener('click', () => { if (isCurrent()) mountFogRoom(); });
+    panel.append(retry);
+    console.error('Exploration scene failed to load', error);
+    },
+  });
+}
 
 function disposeAvatarViewer() {
   if (avatarViewerHandle) {
@@ -997,287 +1077,16 @@ function disposeAvatarViewer() {
   }
 }
 
-function mountAvatarViewer() {
+async function mountAvatarViewer() {
   const container = document.querySelector("[data-avatar-viewer]");
   const caption = document.querySelector("[data-avatar-caption]");
   if (!container) return;
 
   disposeAvatarViewer();
-  avatarViewerHandle = createAvatarViewer(container, caption);
+  const {createAvatarViewer} = await import('./legacyAvatarViewer.js');
+  if (container.isConnected) avatarViewerHandle = createAvatarViewer(container, caption, avatarViewerState);
 }
 
-function createAvatarViewer(container, caption) {
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xf4eee6);
-
-  const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
-  camera.position.set(0, -0.35, 5.2);
-
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-  renderer.setSize(container.clientWidth || 1, container.clientHeight || 1, false);
-  renderer.setClearColor(0x000000, 0);
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  container.replaceChildren(renderer.domElement);
-  renderer.domElement.className = "avatar-canvas";
-
-  const controls = new OrbitControls(camera, renderer.domElement);
-  controls.enablePan = false;
-  controls.enableZoom = false;
-  controls.enableDamping = true;
-  controls.dampingFactor = 0.06;
-  controls.autoRotate = avatarViewerState.autoRotate;
-  controls.autoRotateSpeed = 1.1;
-  controls.minPolarAngle = Math.PI * 0.34;
-  controls.maxPolarAngle = Math.PI * 0.62;
-  controls.target.set(0, 0.2, 0);
-
-  scene.add(new THREE.AmbientLight(0xffffff, 2.2));
-
-  const keyLight = new THREE.DirectionalLight(0xfff3e2, 2.5);
-  keyLight.position.set(4, 6, 5);
-  scene.add(keyLight);
-
-  const fillLight = new THREE.DirectionalLight(0xcfe0ff, 1.2);
-  fillLight.position.set(-4, 3, 4);
-  scene.add(fillLight);
-
-  const rimLight = new THREE.DirectionalLight(0xf6d6b1, 0.8);
-  rimLight.position.set(0, 3, -5);
-  scene.add(rimLight);
-
-  const ground = new THREE.Mesh(
-    new THREE.CircleGeometry(2.7, 64),
-    new THREE.MeshStandardMaterial({ color: 0xd7c7b8, roughness: 1, metalness: 0 }),
-  );
-  ground.rotation.x = -Math.PI / 2;
-  ground.position.y = -1.55;
-  ground.receiveShadow = true;
-  scene.add(ground);
-
-  const shadow = new THREE.Mesh(
-    new THREE.CircleGeometry(1.8, 48),
-    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.12 }),
-  );
-  shadow.rotation.x = -Math.PI / 2;
-  shadow.position.y = -1.49;
-  shadow.scale.set(1.1, 0.5, 1);
-  scene.add(shadow);
-
-  let frameId = 0;
-  let disposed = false;
-
-  const loader = new GLTFLoader();
-  loader.load(
-    "/assets/center-specimen.glb",
-    (gltf) => {
-      if (disposed) return;
-
-      const loadedModel = gltf.scene;
-      const bounds = new THREE.Box3().setFromObject(loadedModel);
-      const size = bounds.getSize(new THREE.Vector3());
-      const center = bounds.getCenter(new THREE.Vector3());
-      const maxDimension = Math.max(size.x, size.y, size.z) || 1;
-
-      loadedModel.position.sub(center);
-      loadedModel.scale.setScalar(4.4 / maxDimension);
-      scene.add(loadedModel);
-
-      const scaledBounds = new THREE.Box3().setFromObject(loadedModel);
-      loadedModel.position.y += -1.45 - scaledBounds.min.y;
-      if (caption) caption.textContent = "";
-    },
-    undefined,
-    () => {
-      if (caption) caption.textContent = "Model could not load.";
-    },
-  );
-
-  function resizeRenderer() {
-    const width = container.clientWidth || 1;
-    const height = container.clientHeight || 1;
-    camera.aspect = width / height;
-    camera.updateProjectionMatrix();
-    renderer.setSize(width, height, false);
-  }
-
-  function animate() {
-    if (disposed) return;
-    controls.update();
-    renderer.render(scene, camera);
-    frameId = window.requestAnimationFrame(animate);
-  }
-
-  const resizeObserver = new ResizeObserver(resizeRenderer);
-  resizeObserver.observe(container);
-  window.addEventListener("resize", resizeRenderer);
-  resizeRenderer();
-  if (caption) caption.textContent = "";
-  animate();
-
-  return {
-    destroy() {
-      disposed = true;
-      window.cancelAnimationFrame(frameId);
-      resizeObserver.disconnect();
-      window.removeEventListener("resize", resizeRenderer);
-      controls.dispose();
-      scene.traverse((object) => {
-        if (object.geometry) {
-          object.geometry.dispose();
-        }
-        if (object.material) {
-          const materials = Array.isArray(object.material) ? object.material : [object.material];
-          materials.forEach((material) => {
-            if (material && typeof material.dispose === "function") {
-              material.dispose();
-            }
-          });
-        }
-      });
-      renderer.dispose();
-      container.replaceChildren();
-    },
-  };
-}
-
-function buildAvatarModel() {
-  const group = new THREE.Group();
-  group.position.y = -1.18;
-  group.rotation.y = 0.2;
-
-  const skinMaterial = new THREE.MeshStandardMaterial({ color: 0xe7bf97, roughness: 0.82, metalness: 0 });
-  const sweaterMaterial = new THREE.MeshStandardMaterial({ color: 0xe9dfd2, roughness: 0.95, metalness: 0 });
-  const jeansMaterial = new THREE.MeshStandardMaterial({ color: 0x5d6f8d, roughness: 0.96, metalness: 0 });
-  const shoeMaterial = new THREE.MeshStandardMaterial({ color: 0xe2d5c8, roughness: 0.95, metalness: 0 });
-  const hairMaterial = new THREE.MeshStandardMaterial({ color: 0x523a2f, roughness: 0.88, metalness: 0 });
-  const backpackMaterial = new THREE.MeshStandardMaterial({ color: 0x7a563d, roughness: 0.9, metalness: 0 });
-  const eyeMaterial = new THREE.MeshStandardMaterial({ color: 0x211b18, roughness: 0.7, metalness: 0 });
-
-  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.95, 1.55, 8, 18), sweaterMaterial);
-  torso.position.y = 1.2;
-  torso.scale.set(1, 1.05, 0.94);
-  group.add(torso);
-
-  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.22, 16), skinMaterial);
-  neck.position.y = 2.4;
-  group.add(neck);
-
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.84, 32, 24), skinMaterial);
-  head.position.y = 3.18;
-  group.add(head);
-
-  const hairCap = new THREE.Mesh(new THREE.SphereGeometry(0.96, 32, 24), hairMaterial);
-  hairCap.position.y = 3.46;
-  hairCap.scale.set(1.04, 0.82, 1.0);
-  group.add(hairCap);
-
-  const leftEye = new THREE.Mesh(new THREE.SphereGeometry(0.055, 12, 12), eyeMaterial);
-  leftEye.position.set(-0.28, 3.22, 0.78);
-  leftEye.scale.set(0.72, 1.25, 0.45);
-  group.add(leftEye);
-
-  const rightEye = leftEye.clone();
-  rightEye.position.x = 0.28;
-  group.add(rightEye);
-
-  const mouth = new THREE.Mesh(
-    new THREE.TorusGeometry(0.16, 0.014, 8, 24, Math.PI),
-    eyeMaterial,
-  );
-  mouth.position.set(0, 3.0, 0.81);
-  mouth.rotation.set(0, 0, Math.PI);
-  mouth.scale.set(1, 0.58, 1);
-  group.add(mouth);
-
-  const strandPositions = [
-    [-0.52, 3.68, 0.32, 0.55, 0.24, 0.26, -0.38],
-    [-0.18, 3.92, 0.18, 0.52, 0.24, 0.24, -0.12],
-    [0.18, 3.96, 0.2, 0.52, 0.24, 0.24, 0.08],
-    [0.54, 3.68, 0.28, 0.58, 0.25, 0.24, 0.4],
-    [-0.34, 3.72, -0.42, 0.62, 0.24, 0.24, -0.72],
-    [0.42, 3.74, -0.45, 0.6, 0.24, 0.24, -0.7],
-  ];
-
-  strandPositions.forEach(([x, y, z, length, radiusTop, radiusBottom, tilt]) => {
-    const strand = new THREE.Mesh(
-      new THREE.CapsuleGeometry(0.12, length, 4, 10),
-      hairMaterial,
-    );
-    strand.position.set(x, y, z);
-    strand.rotation.z = tilt;
-    strand.rotation.y = x > 0 ? -0.42 : 0.42;
-    strand.scale.set(1, 0.65, 1);
-    group.add(strand);
-  });
-
-  const leftArm = new THREE.Mesh(new THREE.CapsuleGeometry(0.15, 1.2, 6, 12), sweaterMaterial);
-  leftArm.position.set(-1.12, 1.96, 0.05);
-  leftArm.rotation.z = 0.28;
-  leftArm.rotation.y = 0.1;
-  group.add(leftArm);
-
-  const rightArm = new THREE.Mesh(new THREE.CapsuleGeometry(0.15, 1.2, 6, 12), sweaterMaterial);
-  rightArm.position.set(1.12, 1.96, 0.05);
-  rightArm.rotation.z = -0.28;
-  rightArm.rotation.y = -0.1;
-  group.add(rightArm);
-
-  const leftHand = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 16), skinMaterial);
-  leftHand.position.set(-1.22, 1.24, 0.06);
-  group.add(leftHand);
-
-  const rightHand = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 16), skinMaterial);
-  rightHand.position.set(1.22, 1.24, 0.06);
-  group.add(rightHand);
-
-  const backpack = new THREE.Mesh(new THREE.CapsuleGeometry(0.56, 1.35, 8, 18), backpackMaterial);
-  backpack.position.set(0, 1.34, -0.46);
-  backpack.rotation.x = -0.08;
-  backpack.scale.set(1.16, 1, 0.42);
-  group.add(backpack);
-
-  const leftStrap = new THREE.Mesh(new THREE.CapsuleGeometry(0.085, 1.28, 6, 12), backpackMaterial);
-  leftStrap.position.set(-0.48, 1.78, 0.45);
-  leftStrap.rotation.z = 0.1;
-  group.add(leftStrap);
-
-  const rightStrap = new THREE.Mesh(new THREE.CapsuleGeometry(0.085, 1.28, 6, 12), backpackMaterial);
-  rightStrap.position.set(0.48, 1.78, 0.45);
-  rightStrap.rotation.z = -0.1;
-  group.add(rightStrap);
-
-  const leftGrip = new THREE.Mesh(new THREE.SphereGeometry(0.14, 16, 16), skinMaterial);
-  leftGrip.position.set(-0.54, 1.5, 0.64);
-  leftGrip.scale.set(0.9, 1.15, 0.9);
-  group.add(leftGrip);
-
-  const rightGrip = leftGrip.clone();
-  rightGrip.position.x = 0.54;
-  group.add(rightGrip);
-
-  const leftLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.31, 0.34, 1.7, 18), jeansMaterial);
-  leftLeg.position.set(-0.35, -0.04, 0.08);
-  group.add(leftLeg);
-
-  const rightLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.31, 0.34, 1.7, 18), jeansMaterial);
-  rightLeg.position.set(0.35, -0.04, 0.08);
-  group.add(rightLeg);
-
-  const leftShoe = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.22, 1.02), shoeMaterial);
-  leftShoe.position.set(-0.35, -1.0, 0.28);
-  leftShoe.rotation.y = 0.04;
-  group.add(leftShoe);
-
-  const rightShoe = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.22, 1.02), shoeMaterial);
-  rightShoe.position.set(0.35, -1.0, 0.28);
-  rightShoe.rotation.y = -0.04;
-  group.add(rightShoe);
-
-  return {
-    group,
-  };
-}
 
 function createCardFromTool(tool, treeId) {
   const blocker = getBlocker(state.selectedBlockerId ?? blockerCatalog[0].id);
@@ -1666,6 +1475,7 @@ function resetSession() {
   state.activeQuizQuestions = [];
   state.scenarioOpen = false;
   state.scenarioPageIndex = 0;
+  state.exploreOpen = false;
   render();
 }
 
@@ -1676,10 +1486,12 @@ function returnToCrossroads() {
   state.victorySummary = null;
   state.cardLocked = false;
   state.playQueue = [];
+  state.exploreOpen = false;
   render();
 }
 
 function openQuiz() {
+  state.exploreOpen = false;
   state.quizOpen = true;
   state.scenarioOpen = false;
   state.quizIndex = 0;
@@ -1697,6 +1509,11 @@ function selectQuizAnswer(answerIndex) {
   if (!state.quizOpen || state.quizIndex >= state.activeQuizQuestions.length) return;
   if (state.quizAnswers[state.quizIndex] !== undefined) return;
   state.quizAnswers[state.quizIndex] = answerIndex;
+  const question = state.activeQuizQuestions[state.quizIndex];
+  if (question.id && question.answer === answerIndex) {
+    const saved = earnKey(question.id);
+    state.learning.keys = [...new Set([...state.learning.keys, ...saved.keys, question.id])];
+  }
   render();
 }
 
@@ -1713,17 +1530,40 @@ function toggleAutoRotate() {
 }
 
 function openScenario() {
-  if (!state.selectedBlockerId || !getScenarioPages(state.selectedBlockerId).length) return;
+  rememberModalEntry();
+  if (!state.selectedBlockerId) state.selectedBlockerId = 'avoidance';
+  if (!getScenarioPages(state.selectedBlockerId).length) return;
+  state.exploreOpen = false;
+  state.storyFromWorld = false;
   state.scenarioOpen = true;
-  state.scenarioPageIndex = 0;
+  state.scenarioPageIndex = state.selectedBlockerId === 'avoidance' ? readProgress().bookmark : 0;
   state.quizOpen = false;
   render();
 }
 
 function closeScenario() {
   state.scenarioOpen = false;
+  state.exploreOpen = state.storyFromWorld;
+  state.storyFromWorld = false;
   state.scenarioPageIndex = 0;
   render();
+  if(!state.exploreOpen)restoreModalEntry();
+}
+
+function openExplore() {
+  rememberModalEntry();
+  state.selectedBlockerId = "avoidance";
+  state.selectedTreeId = getBestTreeForBlocker("avoidance");
+  state.exploreOpen = true;
+  state.quizOpen = false;
+  state.scenarioOpen = false;
+  render();
+}
+
+function closeExplore() {
+  state.exploreOpen = false;
+  render();
+  restoreModalEntry();
 }
 
 function changeScenarioPage(direction) {
@@ -1748,12 +1588,13 @@ function createApp() {
   const selectedReference = psychologicalStateReference.find((entry) => entry.id === state.selectedBlockerId) ?? null;
   return `
     <div class="app-shell demo-shell">
+      <header class="dream-header"><a href="/" class="dream-brand">✦ MINDSTONE</a><span>Read a story. Carry a memory. Find a way.</span><button data-action="browse-stories">Choose a story ↗</button></header>
       <div class="layout dashboard-layout">
         <aside class="panel library-panel stack">
           <div class="stage-header">
             <div>
               <div class="title">Psychological States</div>
-              <div class="muted small">Select a state on the left.</div>
+              <div class="muted small">Open a category, then choose a state.</div>
             </div>
           </div>
           <div class="library-list category-list">
@@ -1763,8 +1604,8 @@ function createApp() {
                 const hasSelection = categoryStates.some((entry) => entry.id === state.selectedBlockerId);
 
                 return `
-                  <section class="category-card ${hasSelection ? "has-selection" : ""}">
-                    <div class="category-header">
+                  <details class="category-card ${hasSelection ? "has-selection" : ""}" ${hasSelection ? 'open' : ''}>
+                    <summary class="category-header">
                       <span class="library-icon category-icon">${category.name.slice(0, 1)}</span>
                       <span class="library-copy">
                         <span class="title">${category.name}</span>
@@ -1772,7 +1613,7 @@ function createApp() {
                       </span>
                       <span class="category-symbol">${category.symbol}</span>
                       <span class="category-count">${categoryStates.length}</span>
-                    </div>
+                    </summary>
                     <div class="category-states">
                       ${categoryStates
                         .map(
@@ -1782,6 +1623,7 @@ function createApp() {
                               ? `
                                 <button class="category-state-image-button ${entry.id === state.selectedBlockerId ? "active" : ""}" data-path="${entry.id}" aria-label="${entry.name}">
                                   <img class="category-state-image" src="${previewImage}" alt="${entry.name}" />
+                                  <span class="state-caption">${entry.name}</span>
                                 </button>
                               `
                               : `
@@ -1793,7 +1635,7 @@ function createApp() {
                         )
                         .join("")}
                     </div>
-                  </section>
+                  </details>
                 `;
               })
               .join("")}
@@ -1802,28 +1644,31 @@ function createApp() {
 
         <main class="workspace-column">
           <section class="center-stage card stack viewer-stage">
-            <div class="viewer-frame">
-              <video
-                class="specimen-video"
-                src="/assets/what-avoidance-is-silent.mp4"
-                controls
-                preload="metadata"
-                muted
-                playsinline
-                aria-label="What avoidance is — video"
-              ></video>
+            <div class="viewer-frame moon-home">
+              <div class="moon-home-copy">
+                <span class="moon-eyebrow">MINDSTONE · INTERACTIVE PSYCHOLOGY</span>
+                <h1>Different minds.<br> Different stories.</h1>
+                <p>Explore avoidance, procrastination, and other psychological patterns. Each term introduces a different person’s story — and a world where you can put the ideas into practice.</p>
+                <ol class="moon-learning-path" aria-label="How Mindstone works">
+                  <li><span>01 · UNDERSTAND</span>Watch a short introduction.</li>
+                  <li><span>02 · RECOGNIZE</span>See the pattern in a comic story.</li>
+                  <li><span>03 · PRACTICE</span>Apply the ideas in interactive challenges.</li>
+                </ol>
+                <button type="button" class="moon-cta" data-action="browse-stories">Explore the stories <span aria-hidden="true">↗</span></button>
+                <span class="moon-home-note">CHOOSE A TERM TO FIND ITS STORY · AVOIDANCE INCLUDES 3 PLAYABLE SCENES</span>
+                <p class="moon-scope-note">A learning experience, not a diagnosis or a substitute for therapy.</p>
+              </div>
+              <div class="story-atlas" data-story-atlas></div>
             </div>
           </section>
 
           ${buildBottomCards()}
         </main>
 
-        <aside class="panel info-rail stack">
-          ${buildInfoPanel(selectedReference)}
-        </aside>
       </div>
       ${state.scenarioOpen ? buildScenarioModal() : ""}
       ${state.quizOpen ? buildQuizModal() : ""}
+      ${state.exploreOpen ? buildExploreModal() : ""}
     </div>
   `;
   if (state.mode === "menu") {
@@ -2007,11 +1852,12 @@ function createApp() {
 }
 
 function buildBottomCards() {
+
   return `
     <section class="card deck-card stack">
       <div class="row" style="justify-content: space-between; align-items: center;">
         <div>
-          <div class="title">Actions</div>
+          <div class="title" data-chapter-feedback role="status">Choose your next chapter</div>
         </div>
       </div>
       <div class="bottom-cards">
@@ -2020,20 +1866,24 @@ function buildBottomCards() {
           type="button"
           data-action="open-scenario"
           aria-label="Scenario"
-          ${state.selectedBlockerId ? "" : "disabled"}
         >
           <div class="bottom-card-label">
             <div class="title">Scenario</div>
-            <div class="muted small">View a realistic moment.</div>
+            <div class="muted small">Learn a term through a character’s illustrated story.</div>
           </div>
         </button>
-        <button class="bottom-card bottom-card-button solution-card" type="button" data-action="open-quiz" aria-label="Quiz">
+        <button
+          class="bottom-card bottom-card-button solution-card explore-card"
+          type="button"
+          data-action="open-explore"
+          aria-label="Explore a story"
+        >
+          <div class="explore-card-orbit" aria-hidden="true"><span></span><span></span><span></span></div>
           <div class="bottom-card-label">
-            <div class="title">Quiz</div>
-            <div class="muted small">Test your knowledge with quick prompts.</div>
+            <div class="title">Explore</div>
+            <div class="muted small">Enter their world and put the story’s ideas into practice.</div>
           </div>
         </button>
-        <button class="bottom-card bottom-card-button solution-card" type="button" aria-label="Placeholder action"></button>
       </div>
     </section>
   `;
@@ -2110,7 +1960,30 @@ function buildInfoPanel(selectedReference) {
   `;
 }
 
+function buildExploreModal() {
+  return `
+    <div class="explore-overlay" role="presentation">
+      <section class="explore-modal" role="dialog" aria-modal="true" aria-labelledby="explore-title">
+        <header class="explore-header">
+          <div>
+            <div class="explore-kicker">MIRA AND THE MOONSTONE / AFTER THE COMIC</div>
+            <div class="explore-title" id="explore-title">One Piece at a Time</div>
+          </div>
+          <button class="explore-close" type="button" data-explore-action="close" aria-label="Close Explore">×</button>
+        </header>
+        <div class="explore-body">
+          <div class="explore-world" data-fog-room>
+            <div class="explore-world-badge">Drag to look around · Click glowing objects</div>
+          </div>
+          <aside class="explore-panel" data-fog-panel aria-live="polite"></aside>
+        </div>
+      </section>
+    </div>
+  `;
+}
+
 function buildScenarioModal() {
+  if (state.selectedBlockerId === 'avoidance') return `<div class="novel-overlay"><section class="novel-modal" role="dialog" aria-modal="true" aria-label="${state.storyFromWorld ? 'Legacy exploration clue' : 'Mira and the Moonstone'}" data-story-reader></section></div>`;
   const blocker = getBlocker(state.selectedBlockerId);
   const comicPages = getScenarioPages(state.selectedBlockerId);
   const comicPath = comicPages[state.scenarioPageIndex] ?? comicPages[0];
@@ -2196,7 +2069,9 @@ function buildQuizModal() {
             <button class="quiz-close" type="button" data-quiz-action="close" aria-label="Close quiz">x</button>
           </div>
           <p class="muted small">You answered ${score} out of ${activeQuizQuestions.length} questions correctly for a ${scorePercent}% score.</p>
+          <p>This score is for reflection. Collect memories in Scenario and use them to open the city’s gates.</p>
           <div class="quiz-actions">
+            <button data-action="open-explore">Explore your unlocked room →</button>
             <button class="secondary" type="button" data-quiz-action="restart">Restart</button>
             <button class="primary" type="button" data-quiz-action="close">Done</button>
           </div>
@@ -2211,11 +2086,12 @@ function buildQuizModal() {
         <div class="quiz-header">
           <div>
             <div class="detail-label">Question ${state.quizIndex + 1} of ${activeQuizQuestions.length}</div>
-            <div class="title" id="quiz-title">Quick Check</div>
+            <div class="title" id="quiz-title">${currentQuestion.name || 'Quick Check'}</div>
           </div>
           <button class="quiz-close" type="button" data-quiz-action="close" aria-label="Close quiz">x</button>
         </div>
         <p class="quiz-question">${currentQuestion.question}</p>
+        ${currentQuestion.reward ? '<p class="knowledge-reward">✧ Reflection · Your story memories stay with you regardless of your score.</p>' : ''}
         <div class="quiz-options">
           ${currentQuestion.options
             .map((option, index) => {
@@ -2242,10 +2118,12 @@ function buildQuizModal() {
           isAnswered
             ? `<div class="quiz-feedback ${selectedAnswer === currentQuestion.answer ? "correct" : "incorrect"}">
                 ${selectedAnswer === currentQuestion.answer ? "Correct." : `Correct answer: ${currentQuestion.options[currentQuestion.answer]}.`}
+                ${currentQuestion.explanation ? `<p>${currentQuestion.explanation}</p><strong>${selectedAnswer === currentQuestion.answer ? 'Try applying this idea in the city.' : 'You can read the explanation and try again.'}</strong>` : ''}
               </div>`
             : ""
         }
         <div class="quiz-actions">
+          ${isAnswered && currentQuestion.id && selectedAnswer !== currentQuestion.answer ? '<button data-quiz-action="retry">Try this lesson again</button>' : ''}
           <button class="secondary" type="button" data-quiz-action="close">Close</button>
           <button class="primary" type="button" data-quiz-action="next" ${isAnswered ? "" : "disabled"}>
             ${state.quizIndex === activeQuizQuestions.length - 1 ? "Finish" : "Next"}
@@ -2371,6 +2249,19 @@ function buildCenterDisplay(blocker, enemyPct) {
   `;
 }
 
+function updateExploreAvailability() {
+  const explore = app.querySelector('[data-action="open-explore"]');
+  const copy = explore?.querySelector('.muted');
+  const id = state.selectedBlockerId;
+  if (copy) copy.textContent = id === 'avoidance'
+    ? 'Continue Mira’s story through three playable places.'
+    : id ? 'This topic’s 3D story is in development. Avoidance is playable now.'
+    : 'Choose a topic, then enter its world and practice the story’s ideas.';
+  if (explore) explore.dataset.availability = id === 'avoidance' ? 'ready' : id ? 'in-development' : 'choose-topic';
+  const feedback = app.querySelector('[data-chapter-feedback]');
+  if (feedback) feedback.textContent = 'Choose your next chapter';
+}
+
 function bindEvents() {
   document.querySelectorAll("[data-action]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -2381,8 +2272,23 @@ function bindEvents() {
       if (action === "enter-battle") startPathBattle();
       if (action === "return-crossroads") returnToCrossroads();
       if (action === "start-game") startGame();
+      if (action === "start-avoidance") { state.selectedBlockerId = 'avoidance'; openScenario(); }
+      if (action === "browse-stories") {
+        const topic = app.querySelector('[data-atlas-topic][aria-pressed="true"]') || app.querySelector('[data-atlas-topic]');
+        topic?.focus({preventScroll:true});
+        const feedback = app.querySelector('[data-chapter-feedback]');
+        if (feedback) feedback.textContent = 'Choose a psychological topic to begin';
+      }
       if (action === "open-quiz") openQuiz();
-      if (action === "open-scenario") openScenario();
+      if (action === "open-scenario" || action === "open-explore") {
+        if (!state.selectedBlockerId || (action === 'open-explore' && state.selectedBlockerId !== 'avoidance')) {
+          const feedback = app.querySelector('[data-chapter-feedback]');
+          if (feedback) feedback.textContent = state.selectedBlockerId
+            ? 'World in development · Try Avoidance'
+            : 'Choose a psychological topic to begin';
+        } else if (action === 'open-scenario') openScenario();
+        else openExplore();
+      }
     });
   });
 
@@ -2416,6 +2322,7 @@ function bindEvents() {
       if (action === "close") closeQuiz();
       if (action === "next") advanceQuiz();
       if (action === "restart") openQuiz();
+      if (action === "retry") { delete state.quizAnswers[state.quizIndex]; render(); }
     });
   });
 
@@ -2428,12 +2335,36 @@ function bindEvents() {
       if (action === "page") goToScenarioPage(Number(button.dataset.scenarioPage));
     });
   });
+
+  document.querySelectorAll("[data-explore-action]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (button.dataset.exploreAction === "close") closeExplore();
+    });
+  });
 }
 
 function render() {
   const app = document.querySelector("#app");
+  modalFocusHandle?.destroy();modalFocusHandle=null;
+  storyHandle?.destroy(); storyHandle = null;
+  atlasHandle?.destroy(); atlasHandle = null;
+  topicPickerHandle?.destroy(); topicPickerHandle = null;
+  disposeFogRoom();
   app.innerHTML = createApp();
   bindEvents();
+  topicPickerHandle = mountMobileTopicPicker(app,{onChoose:choosePath});
+  const atlas = app.querySelector('[data-story-atlas]');
+  if (atlas && !state.scenarioOpen && !state.exploreOpen) atlasHandle = loadStoryAtlas(atlas, {initialTopic:state.selectedBlockerId,onSelect(id){state.selectedBlockerId=id;updateExploreAvailability();},onStory(){state.selectedBlockerId='avoidance';openScenario();}});
+  updateExploreAvailability();
+  if (state.exploreOpen) mountFogRoom();
+  const reader = app.querySelector('[data-story-reader]');
+  if (reader) storyHandle = (state.storyFromWorld ? createStoryReader : createMoonstoneReader)(reader, {page:state.scenarioPageIndex, fromWorld:state.storyFromWorld, onClose:closeScenario, onWorld:openExplore});
+  const dashboard = app.querySelector('.dashboard-layout');
+  if (dashboard) dashboard.inert = state.scenarioOpen || state.exploreOpen || state.quizOpen;
+  const modal=app.querySelector('[role="dialog"][aria-modal="true"]');
+  const header=app.querySelector('.dream-header');
+  if(header)header.inert=!!modal;
+  if(modal)modalFocusHandle=containModalFocus(modal,{onEscape:state.exploreOpen?closeExplore:state.scenarioOpen?closeScenario:()=>{state.quizOpen=false;render();}});
 }
 
 render();
