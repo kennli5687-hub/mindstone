@@ -18,7 +18,7 @@
 .moon-cta{padding:15px 24px!important;border-radius:12px!important;background:linear-gradient(135deg,#f8d793,#e8ac70)!important;color:#34284b!important;border:1px solid #fff0c5!important;box-shadow:0 5px 25px #efbb5b35;font-weight:750}
 .moon-cta span{margin-left:25px}.moon-home-note{display:block;margin-top:23px;font-size:10px}.moon-world-label{position:absolute;bottom:23px;right:25px;text-shadow:0 2px 6px #101c40}
 .dashboard-layout .viewer-stage{padding:0;overflow:hidden;min-height:430px;background:#152248;border-radius:24px}
-.dashboard-layout .workspace-column{grid-template-rows:minmax(430px,1fr) auto}
+.dashboard-layout .workspace-column{grid-template-rows:minmax(430px,1fr)}
 .dashboard-layout .deck-card{background:linear-gradient(110deg,#142347e8,#263361d9),url('/assets/moon-home.png') center 80%/cover;border:1px solid #cbb57666;padding:18px;border-radius:22px}
 .dashboard-layout .deck-card>.row .title{color:#f8e6bd;font-family:Georgia,serif;font-size:21px;font-weight:400}
 .dashboard-layout .bottom-card{position:relative;isolation:isolate;min-height:155px!important;height:auto!important;padding:24px!important;border:1px solid #e7c77b88;border-radius:17px;background:linear-gradient(90deg,#19244be8,#26325f44),url('/assets/moon-home.png') center 65%/cover!important;box-shadow:inset 0 0 0 4px #efdcaa0c,0 8px 20px #090f2929;overflow:hidden;transition:transform .2s,border-color .2s}
@@ -32,8 +32,7 @@
 .library-panel .category-list .category-card:nth-child(3){background-image:linear-gradient(100deg,#efc7bff5,#efc7bfba),url('/assets/moon-home.png')!important;background-position:80% 65%!important}
 .library-panel .category-list .category-card:nth-child(4){background-image:linear-gradient(100deg,#f7e0adf5,#f7e0adbb),url('/assets/moon-home.png')!important;background-position:95% 15%!important}
 .library-panel.stack{background:linear-gradient(#172751e8,#182649ed),url('/assets/moon-home.png') center/cover}
-.moon-intro{padding:24px;text-align:center;color:#f9e5bd}.moon-intro video{display:block;width:100%;max-width:850px;max-height:60dvh;margin:20px auto;border-radius:18px;background:#0e1733}.moon-intro p{line-height:1.6}
-@media(max-width:700px){.moon-home,.dashboard-layout .viewer-stage{min-height:380px}.moon-home-copy{padding:24px}.moon-home p{font-size:14px}.moon-world-label{display:none}.dashboard-layout .bottom-card{padding:16px!important}.dashboard-layout .workspace-column{grid-template-rows:auto auto}}
+@media(max-width:700px){.moon-home,.dashboard-layout .viewer-stage{min-height:380px}.moon-home-copy{padding:24px}.moon-home p{font-size:14px}.moon-world-label{display:none}.dashboard-layout .bottom-card{padding:16px!important}.dashboard-layout .workspace-column{grid-template-rows:auto}}
 @media(prefers-reduced-motion:reduce){.dashboard-layout .bottom-card{transition:none}.dashboard-layout .bottom-card:hover{transform:none}}
 body { background:radial-gradient(ellipse at 15% 10%,#6452af88,transparent 40%),radial-gradient(ellipse at 95% 85%,#ef786844,transparent 35%),#101943; }
 .demo-shell { grid-template-rows:auto minmax(0,1fr); gap:18px; }

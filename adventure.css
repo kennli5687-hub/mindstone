@@ -26,6 +26,135 @@
 .novel-footer button { font-size:12px; white-space:nowrap; }
 .novel-page-select { display:flex; align-items:center; gap:6px; font-size:12px; }
 .novel-page-select select { max-width:210px; padding:8px; color:#24345c; background:#fffcf3; border:1px solid #ccc6cb; border-radius:8px; }
+.novel-modal.moonstone-reader {
+  position:relative;
+  display:block;
+  background:radial-gradient(ellipse at top,#ebe4f5,#dedad9);
+}
+.moonstone-page-count,.moonstone-zoom,.moonstone-close { position:absolute; z-index:4; top:13px; }
+.moonstone-page-count {
+  left:20px;
+  padding:8px 11px;
+  border-radius:999px;
+  background:#f9f1e2e8;
+  color:#283255;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.07em;
+  box-shadow:0 5px 16px #20233d20;
+}
+.moonstone-zoom { right:64px; padding:8px 12px; font-size:11px; background:#f9f1e2ee; color:#283255; }
+.moonstone-close {
+  right:16px;
+  width:38px;
+  height:38px;
+  padding:0;
+  border-radius:50%;
+  background:#182752;
+  color:#fff0cc;
+  font-size:24px;
+}
+.moonstone-page-stage {
+  box-sizing:border-box;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:12px;
+  width:100%;
+  height:100%;
+  min-height:0;
+  padding:48px 18px 12px;
+}
+.moonstone-page-stage .novel-scroll {
+  flex:0 0 auto;
+  width:min(650px,calc(66.667dvh - 61.333px));
+  max-width:650px;
+  height:100%;
+  min-height:0;
+  padding:0;
+  overflow:hidden!important;
+  border-radius:12px;
+  background:transparent;
+}
+.moonstone-page-stage .novel-scroll.is-enlarged { overflow:auto!important; }
+.moonstone-page-stage .novel-scroll.is-enlarged {
+  cursor:grab;
+  touch-action:none;
+  user-select:none;
+}
+.moonstone-page-stage .novel-scroll.is-enlarged.is-panning { cursor:grabbing; }
+.moonstone-page-stage .novel-scroll:not(.is-enlarged) .novel-art {
+  width:100%;
+  height:100%;
+  max-width:none;
+  object-fit:contain;
+}
+.moonstone-side-nav {
+  width:46px;
+  height:68px;
+  padding:0;
+  border-radius:999px;
+  background:#182752;
+  color:#fff0cc;
+  font:34px/1 Georgia,serif;
+  box-shadow:0 8px 22px #20233d35;
+}
+.moonstone-side-nav:disabled { opacity:.22; box-shadow:none; }
+.moonstone-world-prompt {
+  position:absolute;
+  inset:0;
+  z-index:8;
+  display:grid;
+  place-items:center;
+  padding:24px;
+  background:#101a43a8;
+  backdrop-filter:blur(7px);
+}
+.moonstone-world-prompt-card {
+  position:relative;
+  width:min(390px,calc(100vw - 64px));
+  padding:34px 30px 30px;
+  border:1px solid #f1d48d;
+  border-radius:18px;
+  background:linear-gradient(145deg,#1d2c60,#111c45);
+  color:#fff1cd;
+  text-align:center;
+  box-shadow:0 22px 70px #05091899,inset 0 0 30px #e7c46f12;
+}
+.moonstone-world-prompt-card p {
+  margin:0 0 20px;
+  font:normal 24px/1.25 Georgia,serif;
+}
+.moonstone-prompt-close {
+  position:absolute;
+  top:8px;
+  right:10px;
+  width:32px;
+  height:32px;
+  padding:0;
+  border:0;
+  border-radius:50%;
+  background:transparent;
+  color:#e7d9b8;
+  font-size:24px;
+}
+.moonstone-enter-world {
+  padding:14px 22px;
+  border:1px solid #fff0bc;
+  border-radius:11px;
+  background:linear-gradient(135deg,#f7da92,#dfaa55);
+  color:#2a2342;
+  font-size:15px;
+  font-weight:800;
+  box-shadow:0 8px 24px #e2b75c3d;
+}
+@media(max-width:700px){
+  .moonstone-page-stage{gap:4px;padding:48px 4px 6px}
+  .moonstone-side-nav{width:34px;height:58px;font-size:29px}
+  .moonstone-page-count{left:8px}
+  .moonstone-zoom{right:50px}
+  .moonstone-close{right:7px}
+}
 .explore-modal { width:min(1450px,calc(100vw - 24px)); height:calc(100dvh - 24px); }
 .explore-body { position:relative; grid-template-columns:minmax(0,1fr) 340px; min-height:0; }
 .explore-body[data-panel="closed"] { grid-template-columns:minmax(0,1fr); }

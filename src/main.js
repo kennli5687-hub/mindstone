@@ -3,7 +3,7 @@ import { mountMobileTopicPicker } from './mobileTopicPicker.js';
 import { createLatestTask } from './latestTask.js';
 import { containModalFocus } from './modalFocus.js';
 import { createStoryReader } from "./adventure/reader.js";
-import { createMoonstoneReader } from "./adventure/moonstoneReader.js";
+import { comicPages as avoidanceComicPages, createMoonstoneReader } from "./adventure/moonstoneReader.js";
 import { readProgress } from "./adventure/progress.js";
 import { lessons, readLearning, earnKey } from "./learning.js";
 
@@ -589,6 +589,13 @@ const statePreviewImages = {
   fear_of_rejection: "/assets/state-fear-of-rejection.png",
 };
 
+const categoryPreviewImages = {
+  behavioral: "/assets/behavioral-blockers-title.png",
+  cognitive: "/assets/cognitive-blockers-title.png",
+  emotional: "/assets/emotional-blockers-title.png",
+  social: "/assets/social-blockers-title.png",
+};
+
 const solutionCatalog = {
   avoidance: [
     {
@@ -874,6 +881,19 @@ const state = {
   exploreOpen: false,
   storyFromWorld: false,
 };
+
+let avoidanceScenarioComicPreload = null;
+
+function preloadAvoidanceScenarioComic() {
+  if (avoidanceScenarioComicPreload) return avoidanceScenarioComicPreload;
+  avoidanceScenarioComicPreload = avoidanceComicPages.map((src) => {
+    const image = new Image();
+    image.decoding = 'async';
+    image.src = src;
+    return image;
+  });
+  return avoidanceScenarioComicPreload;
+}
 
 function cloneBlockerCatalog() {
   return Object.fromEntries(blockerCatalog.map((blocker) => [blocker.id, 0]));
@@ -1588,13 +1608,13 @@ function createApp() {
   const selectedReference = psychologicalStateReference.find((entry) => entry.id === state.selectedBlockerId) ?? null;
   return `
     <div class="app-shell demo-shell">
-      <header class="dream-header"><a href="/" class="dream-brand">✦ MINDSTONE</a><span>Read a story. Carry a memory. Find a way.</span><button data-action="browse-stories">Choose a story ↗</button></header>
+      <header class="dream-header"><a href="/" class="dream-brand" aria-label="Mindstone home"><img class="dream-brand-logo" src="/assets/mindstone-logo.svg" alt="" /><span class="dream-brand-wordmark">MINDSTONE</span></a><button data-action="browse-stories">Choose a story ↗</button></header>
       <div class="layout dashboard-layout">
-        <aside class="panel library-panel stack">
+        <aside class="panel library-panel main-library-panel stack">
           <div class="stage-header">
             <div>
               <div class="title">Psychological States</div>
-              <div class="muted small">Open a category, then choose a state.</div>
+              <div class="muted small">Select a state on the left.</div>
             </div>
           </div>
           <div class="library-list category-list">
@@ -1602,18 +1622,29 @@ function createApp() {
               .map((category) => {
                 const categoryStates = category.states.map((blockerId) => getBlocker(blockerId)).filter(Boolean);
                 const hasSelection = categoryStates.some((entry) => entry.id === state.selectedBlockerId);
+                const categoryPreviewImage = categoryPreviewImages[category.id];
 
                 return `
-                  <details class="category-card ${hasSelection ? "has-selection" : ""}" ${hasSelection ? 'open' : ''}>
-                    <summary class="category-header">
-                      <span class="library-icon category-icon">${category.name.slice(0, 1)}</span>
-                      <span class="library-copy">
-                        <span class="title">${category.name}</span>
-                        <span class="muted small">${category.summary}</span>
-                      </span>
-                      <span class="category-symbol">${category.symbol}</span>
-                      <span class="category-count">${categoryStates.length}</span>
-                    </summary>
+                  <section class="category-card ${categoryPreviewImage ? "has-title-image" : ""} ${hasSelection ? "has-selection" : ""}">
+                    <div class="category-header">
+                      ${
+                        categoryPreviewImage
+                          ? `
+                            <button class="category-title-image-button ${hasSelection ? "active" : ""}" type="button" data-path="${category.states[0]}" aria-label="${category.name}">
+                              <img class="category-title-image" src="${categoryPreviewImage}" alt="${category.name}" />
+                            </button>
+                          `
+                          : `
+                            <span class="library-icon category-icon">${category.name.slice(0, 1)}</span>
+                            <span class="library-copy">
+                              <span class="title">${category.name}</span>
+                              <span class="muted small">${category.summary}</span>
+                            </span>
+                            <span class="category-symbol">${category.symbol}</span>
+                            <span class="category-count">${categoryStates.length}</span>
+                          `
+                      }
+                    </div>
                     <div class="category-states">
                       ${categoryStates
                         .map(
@@ -1623,7 +1654,6 @@ function createApp() {
                               ? `
                                 <button class="category-state-image-button ${entry.id === state.selectedBlockerId ? "active" : ""}" data-path="${entry.id}" aria-label="${entry.name}">
                                   <img class="category-state-image" src="${previewImage}" alt="${entry.name}" />
-                                  <span class="state-caption">${entry.name}</span>
                                 </button>
                               `
                               : `
@@ -1635,7 +1665,7 @@ function createApp() {
                         )
                         .join("")}
                     </div>
-                  </details>
+                  </section>
                 `;
               })
               .join("")}
@@ -1645,24 +1675,11 @@ function createApp() {
         <main class="workspace-column">
           <section class="center-stage card stack viewer-stage">
             <div class="viewer-frame moon-home">
-              <div class="moon-home-copy">
-                <span class="moon-eyebrow">MINDSTONE · INTERACTIVE PSYCHOLOGY</span>
-                <h1>Different minds.<br> Different stories.</h1>
-                <p>Explore avoidance, procrastination, and other psychological patterns. Each term introduces a different person’s story — and a world where you can put the ideas into practice.</p>
-                <ol class="moon-learning-path" aria-label="How Mindstone works">
-                  <li><span>01 · UNDERSTAND</span>Watch a short introduction.</li>
-                  <li><span>02 · RECOGNIZE</span>See the pattern in a comic story.</li>
-                  <li><span>03 · PRACTICE</span>Apply the ideas in interactive challenges.</li>
-                </ol>
-                <button type="button" class="moon-cta" data-action="browse-stories">Explore the stories <span aria-hidden="true">↗</span></button>
-                <span class="moon-home-note">CHOOSE A TERM TO FIND ITS STORY · AVOIDANCE INCLUDES 3 PLAYABLE SCENES</span>
-                <p class="moon-scope-note">A learning experience, not a diagnosis or a substitute for therapy.</p>
-              </div>
+              <div class="moon-home-badge">Explore a living storybook where everyday obstacles become paths toward small, meaningful steps forward.</div>
               <div class="story-atlas" data-story-atlas></div>
             </div>
           </section>
 
-          ${buildBottomCards()}
         </main>
 
       </div>
@@ -1851,44 +1868,6 @@ function createApp() {
   `;
 }
 
-function buildBottomCards() {
-
-  return `
-    <section class="card deck-card stack">
-      <div class="row" style="justify-content: space-between; align-items: center;">
-        <div>
-          <div class="title" data-chapter-feedback role="status">Choose your next chapter</div>
-        </div>
-      </div>
-      <div class="bottom-cards">
-        <button
-          class="bottom-card bottom-card-button solution-card"
-          type="button"
-          data-action="open-scenario"
-          aria-label="Scenario"
-        >
-          <div class="bottom-card-label">
-            <div class="title">Scenario</div>
-            <div class="muted small">Learn a term through a character’s illustrated story.</div>
-          </div>
-        </button>
-        <button
-          class="bottom-card bottom-card-button solution-card explore-card"
-          type="button"
-          data-action="open-explore"
-          aria-label="Explore a story"
-        >
-          <div class="explore-card-orbit" aria-hidden="true"><span></span><span></span><span></span></div>
-          <div class="bottom-card-label">
-            <div class="title">Explore</div>
-            <div class="muted small">Enter their world and put the story’s ideas into practice.</div>
-          </div>
-        </button>
-      </div>
-    </section>
-  `;
-}
-
 function buildInfoPanel(selectedReference) {
   if (!selectedReference) {
     return `
@@ -1983,7 +1962,7 @@ function buildExploreModal() {
 }
 
 function buildScenarioModal() {
-  if (state.selectedBlockerId === 'avoidance') return `<div class="novel-overlay"><section class="novel-modal" role="dialog" aria-modal="true" aria-label="${state.storyFromWorld ? 'Legacy exploration clue' : 'Mira and the Moonstone'}" data-story-reader></section></div>`;
+  if (state.selectedBlockerId === 'avoidance') return `<div class="novel-overlay"><section class="novel-modal" role="dialog" aria-modal="true" aria-label="${state.storyFromWorld ? 'Legacy exploration clue' : 'Before we meet Mira'}" data-story-reader></section></div>`;
   const blocker = getBlocker(state.selectedBlockerId);
   const comicPages = getScenarioPages(state.selectedBlockerId);
   const comicPath = comicPages[state.scenarioPageIndex] ?? comicPages[0];
@@ -2262,6 +2241,47 @@ function updateExploreAvailability() {
   if (feedback) feedback.textContent = 'Choose your next chapter';
 }
 
+function bindLibraryFlyouts() {
+  const cards = [...document.querySelectorAll(".main-library-panel .category-card")];
+  const closeTimers = new Map();
+
+  const cancelClose = (card) => {
+    const timer = closeTimers.get(card);
+    if (timer) window.clearTimeout(timer);
+    closeTimers.delete(card);
+  };
+
+  const openFlyout = (card) => {
+    cards.forEach((otherCard) => {
+      if (otherCard === card) return;
+      cancelClose(otherCard);
+      otherCard.classList.remove("is-flyout-open");
+    });
+    cancelClose(card);
+    card.classList.add("is-flyout-open");
+  };
+
+  const scheduleClose = (card) => {
+    cancelClose(card);
+    closeTimers.set(card, window.setTimeout(() => {
+      card.classList.remove("is-flyout-open");
+      closeTimers.delete(card);
+    }, 75));
+  };
+
+  cards.forEach((card) => {
+    const flyout = card.querySelector(".category-states");
+    card.addEventListener("pointerenter", () => openFlyout(card));
+    card.addEventListener("pointerleave", () => scheduleClose(card));
+    flyout?.addEventListener("pointerenter", () => openFlyout(card));
+    flyout?.addEventListener("pointerleave", () => scheduleClose(card));
+    card.addEventListener("focusin", () => openFlyout(card));
+    card.addEventListener("focusout", (event) => {
+      if (!card.contains(event.relatedTarget)) scheduleClose(card);
+    });
+  });
+}
+
 function bindEvents() {
   document.querySelectorAll("[data-action]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -2303,6 +2323,8 @@ function bindEvents() {
       choosePath(button.dataset.path);
     });
   });
+
+  bindLibraryFlyouts();
 
   document.querySelectorAll("[data-card]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -2354,11 +2376,11 @@ function render() {
   bindEvents();
   topicPickerHandle = mountMobileTopicPicker(app,{onChoose:choosePath});
   const atlas = app.querySelector('[data-story-atlas]');
-  if (atlas && !state.scenarioOpen && !state.exploreOpen) atlasHandle = loadStoryAtlas(atlas, {initialTopic:state.selectedBlockerId,onSelect(id){state.selectedBlockerId=id;updateExploreAvailability();},onStory(){state.selectedBlockerId='avoidance';openScenario();}});
+  if (atlas && !state.scenarioOpen && !state.exploreOpen) atlasHandle = loadStoryAtlas(atlas, {initialTopic:state.selectedBlockerId,onSelect(id){state.selectedBlockerId=id;updateExploreAvailability();},onStoryPrepare(){preloadAvoidanceScenarioComic();},onStory(){state.selectedBlockerId='avoidance';openScenario();}});
   updateExploreAvailability();
   if (state.exploreOpen) mountFogRoom();
   const reader = app.querySelector('[data-story-reader]');
-  if (reader) storyHandle = (state.storyFromWorld ? createStoryReader : createMoonstoneReader)(reader, {page:state.scenarioPageIndex, fromWorld:state.storyFromWorld, onClose:closeScenario, onWorld:openExplore});
+  if (reader) storyHandle = (state.storyFromWorld ? createStoryReader : createMoonstoneReader)(reader, {page:state.scenarioPageIndex, fromWorld:state.storyFromWorld, onClose:closeScenario, onWorld:openExplore, onGuideExplore:openExplore});
   const dashboard = app.querySelector('.dashboard-layout');
   if (dashboard) dashboard.inert = state.scenarioOpen || state.exploreOpen || state.quizOpen;
   const modal=app.querySelector('[role="dialog"][aria-modal="true"]');

@@ -1,45 +1,100 @@
 // User-supplied artwork, in numeric (not lexicographic) page order.
 export const comicPages = Array.from({length:10}, (_,i) => `/assets/avoidance-comic/Story%20comic%2010/fant${i+1}.png`);
-const bookmarkKey = 'mindstone-moonstone-comic-page-v1';
 export function createMoonstoneReader(host, options = {}) {
-  let index = 0, enlarged = false, introduction = true;
-  try { index = Math.max(0,Math.min(9,Number(localStorage.getItem(bookmarkKey)) || 0)); } catch {}
+  host.classList.add('moonstone-reader');
+  let index = 0, enlarged = false, worldPrompt = false;
+  function bindPanning() {
+    const scroller=host.querySelector('.novel-scroll.is-enlarged');
+    if(!scroller)return;
+    let pointerId=null,startX=0,startY=0,startLeft=0,startTop=0;
+    const stop=(event)=>{
+      if(pointerId===null||event.pointerId!==pointerId)return;
+      scroller.classList.remove('is-panning');
+      try{scroller.releasePointerCapture(pointerId);}catch{}
+      pointerId=null;
+    };
+    scroller.addEventListener('pointerdown',(event)=>{
+      if(event.button!==0||event.target.closest('button,a,input,select,textarea'))return;
+      pointerId=event.pointerId;startX=event.clientX;startY=event.clientY;
+      startLeft=scroller.scrollLeft;startTop=scroller.scrollTop;
+      scroller.classList.add('is-panning');
+      scroller.setPointerCapture(pointerId);
+      event.preventDefault();
+    });
+    scroller.addEventListener('pointermove',(event)=>{
+      if(event.pointerId!==pointerId)return;
+      scroller.scrollLeft=startLeft-(event.clientX-startX);
+      scroller.scrollTop=startTop-(event.clientY-startY);
+      event.preventDefault();
+    });
+    scroller.addEventListener('pointerup',stop);
+    scroller.addEventListener('pointercancel',stop);
+    scroller.addEventListener('lostpointercapture',stop);
+    scroller.querySelector('img')?.addEventListener('dragstart',(event)=>event.preventDefault());
+  }
   function render() {
-    if(introduction){
-      host.innerHTML=`<header class="novel-header"><div><span class="novel-eyebrow">SCENARIO · START HERE</span><h1>Before we meet Mira</h1></div><button data-comic="close" aria-label="Close story">×</button></header><div class="novel-scroll moon-intro"><p>A short introduction to avoidance, followed by Mira’s illustrated story.</p><video controls playsinline preload="metadata" src="/assets/what-avoidance-is-silent.mp4" aria-label="What avoidance is — video"></video><p>Watch at your own pace, or go straight to the comic.</p></div><footer class="novel-footer"><button data-comic="read">${index?'Continue reading':'Read the story'} →</button></footer>`;
-      return;
-    }
-    host.innerHTML = `<header class="novel-header"><div><span class="novel-eyebrow">SCENARIO · AVOIDANCE</span><h1>Mira and the Moonstone</h1></div><button data-comic="close" aria-label="Close story">×</button></header>
-      <div class="novel-toolbar"><span aria-live="polite">PAGE ${index+1} / 10</span><button data-comic="zoom">${enlarged?'Fit page':'Enlarge artwork'}</button></div>
-      <div class="novel-scroll ${enlarged?'is-enlarged':''}"><img class="novel-art" src="${comicPages[index]}" alt="Avoidance: Mira and the Moonstone, comic page ${index+1}. English dialogue is included in the artwork." /><p class="novel-asset-error" hidden>Artwork could not load. <button data-comic="retry">Retry</button></p></div>
-      <footer class="novel-footer"><button data-comic="prev" ${index===0?'disabled':''}>← Previous</button><label class="novel-page-select">Page <select aria-label="Story page">${comicPages.map((_,i)=>`<option value="${i}" ${i===index?'selected':''}>${i+1}</option>`).join('')}</select></label><button data-comic="next" ${index===9?'disabled':''}>Next →</button><button data-comic="close">Done</button></footer>`;
-    if(index===9){const button=document.createElement('button');button.dataset.comic='world';button.textContent='Continue as Mira →';host.querySelector('footer').append(button);}
+    host.innerHTML = `<span class="moonstone-page-count" aria-live="polite">PAGE ${index+1} / 10</span>
+      <button class="moonstone-zoom" data-comic="zoom">${enlarged?'Fit page':'Enlarge artwork'}</button>
+      <button class="moonstone-close" data-comic="close" aria-label="Close story">×</button>
+      <div class="moonstone-page-stage">
+        <button class="moonstone-side-nav previous" data-comic="prev" aria-label="Previous comic page" ${index===0?'disabled':''}>‹</button>
+        <div class="novel-scroll ${enlarged?'is-enlarged':''}">
+          <img class="novel-art" src="${comicPages[index]}" alt="Avoidance: Mira and the Moonstone, comic page ${index+1}. English dialogue is included in the artwork." />
+          <p class="novel-asset-error" hidden>Artwork could not load. <button data-comic="retry">Retry</button></p>
+        </div>
+        <button class="moonstone-side-nav next" data-comic="next" aria-label="${index===9?'Finish comic':'Next comic page'}">›</button>
+      </div>
+      ${worldPrompt?`<div class="moonstone-world-prompt" role="dialog" aria-modal="true" aria-labelledby="moonstone-world-title">
+        <div class="moonstone-world-prompt-card">
+          <button class="moonstone-prompt-close" data-comic="dismiss-world" aria-label="Close prompt">×</button>
+          <p id="moonstone-world-title">Ready to step into the story?</p>
+          <button class="moonstone-enter-world" data-comic="guide-world">Enter Mira's World</button>
+        </div>
+      </div>`:''}`;
     host.querySelector('img').addEventListener('error',()=>{host.querySelector('.novel-asset-error').hidden=false;});
+    bindPanning();
   }
   function turn(next) {
-    index=Math.max(0,Math.min(9,next));
-    try {localStorage.setItem(bookmarkKey,String(index));} catch {}
+    const boundedIndex=Math.max(0,Math.min(9,next));
+    if(boundedIndex===index)return;
+    const movingForward=boundedIndex>index;
+    index=boundedIndex;
+    worldPrompt=false;
     render();
-    host.querySelector('select').focus({preventScroll:true});
+    const focusTarget=host.querySelector(`[data-comic="${movingForward?'next':'prev'}"]:not([disabled])`);
+    (focusTarget??host.querySelector('[data-comic="close"]')).focus({preventScroll:true});
+  }
+  function showWorldPrompt() {
+    if(index!==9)return;
+    worldPrompt=true;
+    render();
+    host.querySelector('[data-comic="guide-world"]')?.focus({preventScroll:true});
+  }
+  function dismissWorldPrompt() {
+    worldPrompt=false;
+    render();
+    host.querySelector('[data-comic="next"]')?.focus({preventScroll:true});
   }
   function click(event) {
     const action=event.target.closest('[data-comic]')?.dataset.comic;
     if(action==='close') options.onClose?.();
-    if(action==='world') options.onWorld?.();
-    if(action==='read'){introduction=false;render();host.querySelector('[data-comic="close"]').focus();}
+    if(action==='guide-world') options.onGuideExplore?.();
+    if(action==='dismiss-world') dismissWorldPrompt();
     if(action==='prev') turn(index-1);
-    if(action==='next') turn(index+1);
+    if(action==='next') index===9?showWorldPrompt():turn(index+1);
     if(action==='zoom'){enlarged=!enlarged;render();host.querySelector('[data-comic="zoom"]').focus();}
     if(action==='retry') render();
   }
-  function change(event){if(event.target.matches('select'))turn(Number(event.target.value));}
   function key(event){
+    if(worldPrompt){
+      if(event.key==='Escape'){event.preventDefault();dismissWorldPrompt();}
+      return;
+    }
     if(event.key==='Escape')options.onClose?.();
-    if(introduction||event.target.matches('select,video'))return;
-    if(event.key==='ArrowRight'){event.preventDefault();turn(index+1);}
+    if(event.key==='ArrowRight'){event.preventDefault();index===9?showWorldPrompt():turn(index+1);}
     if(event.key==='ArrowLeft'){event.preventDefault();turn(index-1);}
   }
-  host.addEventListener('click',click);host.addEventListener('change',change);host.addEventListener('keydown',key);
+  host.addEventListener('click',click);host.addEventListener('keydown',key);
   render();host.querySelector('[data-comic="close"]').focus();
-  return {destroy(){host.removeEventListener('click',click);host.removeEventListener('change',change);host.removeEventListener('keydown',key);host.replaceChildren();}};
+  return {destroy(){host.removeEventListener('click',click);host.removeEventListener('keydown',key);host.replaceChildren();}};
 }

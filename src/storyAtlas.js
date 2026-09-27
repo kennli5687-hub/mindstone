@@ -10,8 +10,8 @@ import {atlasTopics} from './storyTopics.js';
 export {atlasTopics} from './storyTopics.js';
 export const storybookAsset='/assets/story-models/storybook-gateway.glb';
 export const libraryAsset='/assets/story-models/story-library-room.glb';
-export function createStoryAtlas(host,{onStory,onSelect,initialTopic=null}={}){
-  let disposed=false,frame=0,model=null,library=null,book=null,loadingBook=false,visible=true,paused=false,last=0,clock=0,selected=-1,down=null,drag=0,targetX=0,targetY=0,contextLost=false,door=null,doorOpen=false;
+export function createStoryAtlas(host,{onStory,onStoryPrepare,onSelect,initialTopic=null}={}){
+  let disposed=false,frame=0,model=null,library=null,book=null,loadingBook=false,visible=true,paused=false,last=0,clock=0,selected=-1,down=null,drag=0,targetX=0,targetY=0,contextLost=false,door=null,doorOpen=false,storyTimer=0;
   const reduced=matchMedia('(prefers-reduced-motion: reduce)');
   let renderer,unavailable=false,libraryFailed=false,bookFailed=false;
   let renderSignature='',renderCount=0;
@@ -28,6 +28,7 @@ export function createStoryAtlas(host,{onStory,onSelect,initialTopic=null}={}){
   viewport.append(doorControl);
   const bookCue=document.createElement('div');bookCue.className='atlas-book-cue';bookCue.hidden=true;bookCue.setAttribute('aria-hidden','true');
   const cueTitle=document.createElement('strong'),cueHint=document.createElement('span');bookCue.append(cueTitle,cueHint);viewport.append(bookCue);
+  const doorTransition=document.createElement('span');doorTransition.className='atlas-door-transition';doorTransition.setAttribute('aria-hidden','true');viewport.append(doorTransition);
   function syncBookCue(){
     const index=hovered>=0?hovered:focused;
     const cue=!unavailable&&!contextLost&&model===library&&library?chapterCue(atlasTopics[index]):null;
@@ -44,7 +45,7 @@ export function createStoryAtlas(host,{onStory,onSelect,initialTopic=null}={}){
     doorControl.hidden=selected!==0||!book||!door||unavailable||contextLost;
     doorControl.setAttribute('aria-pressed',String(doorOpen));
     doorControl.setAttribute('aria-label',doorOpen?'Close the miniature door':'Open the miniature door');
-    doorControl.textContent=doorOpen?'Close door ↙':'Open door ↗';
+    doorControl.textContent='Open the door';
   }
   function syncPreview(){
     const feedback=previewStatus({unavailable,contextLost,selected,library:!!library,book:!!book,libraryFailed,bookFailed});
@@ -59,7 +60,24 @@ export function createStoryAtlas(host,{onStory,onSelect,initialTopic=null}={}){
     syncDoorControl();
     syncBookCue();
   }
-  function toggleDoor(){if(selected!==0||!book||!door||contextLost||unavailable)return;doorOpen=!doorOpen;syncDoorControl();help.textContent=doorOpen?'The door is open. Meet Mira below.':'Open the miniature door · Drag to turn';viewport.setAttribute('aria-description',doorOpen?'The miniature door is open.':'The miniature door is closed.');}
+  function clearStoryTransition(){
+    if(storyTimer)window.clearTimeout(storyTimer);
+    storyTimer=0;doorTransition.classList.remove('is-active');viewport.removeAttribute('aria-busy');
+  }
+  function beginStoryTransition(){
+    clearStoryTransition();
+    try{onStoryPrepare?.();}catch{}
+    doorTransition.classList.add('is-active');viewport.setAttribute('aria-busy','true');
+    storyTimer=window.setTimeout(()=>{
+      storyTimer=0;doorTransition.classList.remove('is-active');viewport.removeAttribute('aria-busy');
+      if(!disposed&&doorOpen)onStory?.();
+    },950);
+  }
+  function toggleDoor(){
+    if(selected!==0||!book||!door||contextLost||unavailable)return;
+    doorOpen=!doorOpen;syncDoorControl();help.textContent=doorOpen?'The door is open. Meet Mira below.':'Open the miniature door · Drag to turn';viewport.setAttribute('aria-description',doorOpen?'The miniature door is open.':'The miniature door is closed.');
+    if(doorOpen)beginStoryTransition();else clearStoryTransition();
+  }
   function showSelection(){
     if(library)library.visible=selected!==0||!book;if(book)book.visible=selected===0;
     const next=selected===0&&book?book:library;
@@ -68,7 +86,7 @@ export function createStoryAtlas(host,{onStory,onSelect,initialTopic=null}={}){
   }
   function select(i,notify=true){
     hovered=focused=-1;
-    selected=i;const t=atlasTopics[i];doorOpen=false;
+    selected=i;const t=atlasTopics[i];doorOpen=false;clearStoryTransition();
     host.querySelectorAll('[data-atlas-topic]').forEach((b,j)=>b.setAttribute('aria-pressed',String(i===j)));
     host.querySelector('.atlas-eyebrow').textContent=i===0?'AVOIDANCE · MIRA’S STORY':'THE STORY LIBRARY';
     help.textContent=i===0?'Click the book to open its door · Drag to turn':'Choose a book or a topic below · Drag to turn';
@@ -165,5 +183,5 @@ export function createStoryAtlas(host,{onStory,onSelect,initialTopic=null}={}){
   if(initialTopic)select(atlasTopics.findIndex(t=>t.id===initialTopic),false);
   reduced.addEventListener('change',updateMotion);
   const detachRestore=()=>renderer?.domElement.removeEventListener('webglcontextrestored',restored);
-  return {destroy(){disposed=true;detachRestore();cancelAnimationFrame(frame);resize?.disconnect();intersection?.disconnect();host.removeEventListener('click',click);host.removeEventListener('focusin',topicFocus);host.removeEventListener('focusout',topicBlur);viewport.removeEventListener('keydown',keyboard);viewport.removeEventListener('pointerdown',pointerDown);viewport.removeEventListener('pointermove',pointerMove);viewport.removeEventListener('pointerup',pointerUp);viewport.removeEventListener('pointercancel',pointerUp);viewport.removeEventListener('pointerleave',pointerLeave);renderer?.domElement.removeEventListener('webglcontextlost',lost);reduced.removeEventListener('change',updateMotion);release(scene);environment?.dispose();renderer?.dispose();host.replaceChildren();}};
+  return {destroy(){disposed=true;clearStoryTransition();detachRestore();cancelAnimationFrame(frame);resize?.disconnect();intersection?.disconnect();host.removeEventListener('click',click);host.removeEventListener('focusin',topicFocus);host.removeEventListener('focusout',topicBlur);viewport.removeEventListener('keydown',keyboard);viewport.removeEventListener('pointerdown',pointerDown);viewport.removeEventListener('pointermove',pointerMove);viewport.removeEventListener('pointerup',pointerUp);viewport.removeEventListener('pointercancel',pointerUp);viewport.removeEventListener('pointerleave',pointerLeave);renderer?.domElement.removeEventListener('webglcontextlost',lost);reduced.removeEventListener('change',updateMotion);release(scene);environment?.dispose();renderer?.dispose();host.replaceChildren();}};
 }
