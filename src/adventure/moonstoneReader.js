@@ -1,7 +1,10 @@
-// User-supplied artwork, in numeric (not lexicographic) page order.
-export const comicPages = Array.from({length:10}, (_,i) => `/assets/avoidance-comic/Story%20comic%2010/fant${i+1}.png`);
+// User-supplied avoidance comic, kept in numeric page order.
+export const comicPages = Array.from({length:8}, (_,i) => `/assets/avoidance-comic/avoidance-8-page/${i+1}.jpg`);
+export const procrastinationComicPages = Array.from({length:8}, (_,i) => `/assets/procrastination-comic/${i+1}.jpg`);
+export const perfectionismComicPages = Array.from({length:8}, (_,i) => `/assets/perfectionism-comic/${i+1}.jpg`);
 export function createMoonstoneReader(host, options = {}) {
   host.classList.add('moonstone-reader');
+  const pages=options.pages??comicPages;
   let index = 0, enlarged = false, worldPrompt = false;
   function bindPanning() {
     const scroller=host.querySelector('.novel-scroll.is-enlarged');
@@ -33,29 +36,29 @@ export function createMoonstoneReader(host, options = {}) {
     scroller.querySelector('img')?.addEventListener('dragstart',(event)=>event.preventDefault());
   }
   function render() {
-    host.innerHTML = `<span class="moonstone-page-count" aria-live="polite">PAGE ${index+1} / 10</span>
+    host.innerHTML = `<span class="moonstone-page-count" aria-live="polite">PAGE ${index+1} / ${pages.length}</span>
       <button class="moonstone-zoom" data-comic="zoom">${enlarged?'Fit page':'Enlarge artwork'}</button>
       <button class="moonstone-close" data-comic="close" aria-label="Close story">×</button>
       <div class="moonstone-page-stage">
         <button class="moonstone-side-nav previous" data-comic="prev" aria-label="Previous comic page" ${index===0?'disabled':''}>‹</button>
         <div class="novel-scroll ${enlarged?'is-enlarged':''}">
-          <img class="novel-art" src="${comicPages[index]}" alt="Avoidance: Mira and the Moonstone, comic page ${index+1}. English dialogue is included in the artwork." />
+          <img class="novel-art" src="${pages[index]}" alt="${options.altPrefix??'Avoidance: Mira and the Moonstone'}, comic page ${index+1}. English dialogue is included in the artwork." />
           <p class="novel-asset-error" hidden>Artwork could not load. <button data-comic="retry">Retry</button></p>
         </div>
-        <button class="moonstone-side-nav next" data-comic="next" aria-label="${index===9?'Finish comic':'Next comic page'}">›</button>
+        <button class="moonstone-side-nav next" data-comic="next" aria-label="${index===pages.length-1?'Finish comic':'Next comic page'}">›</button>
       </div>
       ${worldPrompt?`<div class="moonstone-world-prompt" role="dialog" aria-modal="true" aria-labelledby="moonstone-world-title">
         <div class="moonstone-world-prompt-card">
           <button class="moonstone-prompt-close" data-comic="dismiss-world" aria-label="Close prompt">×</button>
-          <p id="moonstone-world-title">Ready to step into the story?</p>
-          <button class="moonstone-enter-world" data-comic="guide-world">Enter Mira's World</button>
+          <p id="moonstone-world-title">${options.finalPrompt??'Ready to step into the story?'}</p>
+          <button class="moonstone-enter-world" data-comic="guide-world">${options.finalActionLabel??"Enter Mira's World"}</button>
         </div>
       </div>`:''}`;
     host.querySelector('img').addEventListener('error',()=>{host.querySelector('.novel-asset-error').hidden=false;});
     bindPanning();
   }
   function turn(next) {
-    const boundedIndex=Math.max(0,Math.min(9,next));
+    const boundedIndex=Math.max(0,Math.min(pages.length-1,next));
     if(boundedIndex===index)return;
     const movingForward=boundedIndex>index;
     index=boundedIndex;
@@ -65,7 +68,7 @@ export function createMoonstoneReader(host, options = {}) {
     (focusTarget??host.querySelector('[data-comic="close"]')).focus({preventScroll:true});
   }
   function showWorldPrompt() {
-    if(index!==9)return;
+    if(index!==pages.length-1)return;
     worldPrompt=true;
     render();
     host.querySelector('[data-comic="guide-world"]')?.focus({preventScroll:true});
@@ -78,10 +81,10 @@ export function createMoonstoneReader(host, options = {}) {
   function click(event) {
     const action=event.target.closest('[data-comic]')?.dataset.comic;
     if(action==='close') options.onClose?.();
-    if(action==='guide-world') options.onGuideExplore?.();
+    if(action==='guide-world') (options.onFinalAction??options.onGuideExplore)?.();
     if(action==='dismiss-world') dismissWorldPrompt();
     if(action==='prev') turn(index-1);
-    if(action==='next') index===9?showWorldPrompt():turn(index+1);
+    if(action==='next') index===pages.length-1?showWorldPrompt():turn(index+1);
     if(action==='zoom'){enlarged=!enlarged;render();host.querySelector('[data-comic="zoom"]').focus();}
     if(action==='retry') render();
   }
@@ -91,7 +94,7 @@ export function createMoonstoneReader(host, options = {}) {
       return;
     }
     if(event.key==='Escape')options.onClose?.();
-    if(event.key==='ArrowRight'){event.preventDefault();index===9?showWorldPrompt():turn(index+1);}
+    if(event.key==='ArrowRight'){event.preventDefault();index===pages.length-1?showWorldPrompt():turn(index+1);}
     if(event.key==='ArrowLeft'){event.preventDefault();turn(index-1);}
   }
   host.addEventListener('click',click);host.addEventListener('keydown',key);

@@ -852,6 +852,7 @@ const skillTrees = {
 
 const state = {
   learning: readLearning(),
+  coverOpen: true,
   mode: "dashboard",
   day: 1,
   xp: 0,
@@ -1606,6 +1607,28 @@ function goToScenarioPage(pageIndex) {
 function createApp() {
   const blocker = state.selectedBlockerId ? getBlocker(state.selectedBlockerId) : null;
   const selectedReference = psychologicalStateReference.find((entry) => entry.id === state.selectedBlockerId) ?? null;
+  if (state.coverOpen) {
+    return `
+      <div class="app-shell mindstone-cover-shell">
+        <main class="mindstone-cover" aria-labelledby="cover-title">
+          <div class="mindstone-cover-copy">
+            <div class="mindstone-cover-brand"><img src="/assets/mindstone-logo.svg" alt="" /><span>MINDSTONE</span></div>
+            <span class="mindstone-cover-eyebrow">A STORYBOOK FOR SMALL STEPS</span>
+            <h1 id="cover-title">A story can help<br />you take a next step.</h1>
+            <p>Explore everyday challenges through Mira’s story, then try small actions at your own pace.</p>
+            <ol class="mindstone-cover-guide">
+              <li><span>01</span><div><strong>Choose a topic</strong><small>Pick a story that feels useful to explore.</small></div></li>
+              <li><span>02</span><div><strong>Read Mira’s comic</strong><small>Use the arrows or left and right keys to turn pages.</small></div></li>
+              <li><span>03</span><div><strong>Try the activities</strong><small>Follow the prompts. You can take your time.</small></div></li>
+            </ol>
+            <button class="mindstone-cover-button" data-action="enter-library">Open the story library <span aria-hidden="true">→</span></button>
+          </div>
+          <img class="mindstone-cover-art" src="/assets/storybook-poster.png" alt="An open illustrated storybook beside a moonlit story door" />
+          <span class="mindstone-cover-edition">READ · REFLECT · TAKE A SMALL STEP</span>
+        </main>
+      </div>
+    `;
+  }
   return `
     <div class="app-shell demo-shell">
       <header class="dream-header"><a href="/" class="dream-brand" aria-label="Mindstone home"><img class="dream-brand-logo" src="/assets/mindstone-logo.svg" alt="" /><span class="dream-brand-wordmark">MINDSTONE</span></a><button data-action="browse-stories">Choose a story ↗</button></header>
@@ -2286,6 +2309,7 @@ function bindEvents() {
   document.querySelectorAll("[data-action]").forEach((button) => {
     button.addEventListener("click", () => {
       const action = button.dataset.action;
+      if (action === "enter-library") { state.coverOpen = false; render(); }
       if (action === "reset") resetSession();
       if (action === "unlock") unlockTool(state.selectedTreeId);
       if (action === "back-out") backOut();

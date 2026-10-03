@@ -1,13 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {comicPages} from './moonstoneReader.js';
-test('replacement comic contains ten original PNGs in numeric story order',async()=>{
-  assert.equal(comicPages.length,10);
-  for(let i=0;i<10;i++){
-    assert.ok(comicPages[i].endsWith(`/fant${i+1}.png`));
-    const data=await readFile(new URL('../../public'+decodeURIComponent(comicPages[i]),import.meta.url));
-    assert.equal(data.subarray(1,4).toString(),'PNG');
+import {comicPages,procrastinationComicPages,perfectionismComicPages} from './moonstoneReader.js';
+test('story comics contain eight JPEGs in numeric order',async()=>{
+  for(const pages of [comicPages,procrastinationComicPages,perfectionismComicPages]){
+    assert.equal(pages.length,8);
+    for(let i=0;i<pages.length;i++){
+      assert.ok(pages[i].endsWith(`/${i+1}.jpg`));
+      const data=await readFile(new URL('../../public'+decodeURIComponent(pages[i]),import.meta.url));
+      assert.deepEqual([...data.subarray(0,3)],[0xff,0xd8,0xff]);
+    }
   }
 });
 test('dashboard removes quiz entry and information rail',async()=>{
