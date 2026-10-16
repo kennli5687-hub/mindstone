@@ -10,7 +10,8 @@ import {atlasTopics} from './storyTopics.js';
 export {atlasTopics} from './storyTopics.js';
 export const storybookAsset='/assets/story-models/storybook-gateway.glb';
 export const libraryAsset='/assets/story-models/story-library-room.glb';
-export function createStoryAtlas(host,{onStory,onStoryPrepare,onSelect,initialTopic=null}={}){
+export function createStoryAtlas(host,{onStory,onStoryPrepare,onSelect,initialTopic=null,displayOnly=false}={}){
+  host.classList.toggle('atlas-display-only',displayOnly);
   let disposed=false,frame=0,model=null,library=null,book=null,loadingBook=false,visible=true,paused=false,last=0,clock=0,selected=-1,down=null,drag=0,targetX=0,targetY=0,contextLost=false,door=null,doorOpen=false,storyTimer=0;
   const reduced=matchMedia('(prefers-reduced-motion: reduce)');
   let renderer,unavailable=false,libraryFailed=false,bookFailed=false;
@@ -53,9 +54,9 @@ export function createStoryAtlas(host,{onStory,onStoryPrepare,onSelect,initialTo
     status.hidden=!feedback.message;
     status.textContent=feedback.message;
     motion.hidden=feedback.fallback;
-    help.textContent=feedback.fallback?'Preview artwork · Choose a story below':selected===0?(doorOpen?'The door is open. Meet Mira below.':'Open the miniature door · Drag to turn'):'Choose a book or a topic below · Drag to turn';
+    help.textContent=displayOnly?'Drag to turn the 3D story library':feedback.fallback?'Preview artwork · Choose a story below':selected===0?(doorOpen?'The door is open. Meet Mira below.':'Open the miniature door · Drag to turn'):'Choose a book or a topic below · Drag to turn';
     viewport.tabIndex=feedback.fallback?-1:0;
-    viewport.setAttribute('aria-label',feedback.fallback?'Story preview artwork. Choose a topic below.':selected===0?'Mira’s 3D storybook. Click or press Enter to open its door. Escape returns to all stories.':'A 3D library of different psychological stories. Choose a topic below. Arrow keys rotate; Home resets.');
+    viewport.setAttribute('aria-label',displayOnly?'3D story library showing the Overthinking and Self-Doubt books. Drag to rotate the model.':feedback.fallback?'Story preview artwork. Choose a topic below.':selected===0?'Mira’s 3D storybook. Click or press Enter to open its door. Escape returns to all stories.':'A 3D library of different psychological stories. Choose a topic below. Arrow keys rotate; Home resets.');
     if(renderer)renderer.domElement.hidden=feedback.fallback;
     syncDoorControl();
     syncBookCue();
@@ -122,7 +123,7 @@ export function createStoryAtlas(host,{onStory,onStoryPrepare,onSelect,initialTo
       if(!reduced.matches&&!paused){const b=viewport.getBoundingClientRect();targetX=((e.clientY-b.top)/b.height-.5)*.10;}
     }
   }
-  function pointerUp(e){if(e.type!=='pointercancel'&&down&&drag<6){const i=hitChapter(e);if(i>=0){if(model===book)toggleDoor();else select(i);}}down=null;}
+  function pointerUp(e){if(!displayOnly&&e.type!=='pointercancel'&&down&&drag<6){const i=hitChapter(e);if(i>=0){if(model===book)toggleDoor();else select(i);}}down=null;}
   function pointerLeave(){hovered=-1;syncBookCue();}
   function topicFocus(e){const b=e.target.closest('[data-atlas-topic]');focused=b?.matches(':focus-visible')?Number(b.dataset.atlasTopic):-1;syncBookCue();}
   function topicBlur(){focused=-1;syncBookCue();}
@@ -144,7 +145,17 @@ export function createStoryAtlas(host,{onStory,onStoryPrepare,onSelect,initialTo
     }catch{contextLost=true;syncPreview();}
   }
   function keyboard(e){if(e.target!==viewport||unavailable||contextLost)return;if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();targetY=THREE.MathUtils.clamp(targetY+(e.key==='ArrowLeft'?-.15:.15),-.65,.65);}if(e.key==='Home'){e.preventDefault();targetX=targetY=0;}if(e.key==='Escape')select(-1);if(e.key==='Enter'||e.key===' '){e.preventDefault();toggleDoor();}}
-  function prepare(g){g.traverse(o=>{if(g===library&&o.userData.storyId)chapterRoots.push({node:o,baseY:o.position.y,id:o.userData.storyId});if(o.userData.part==='doorHinge')door=o;if(!o.isMesh)return;o.castShadow=true;o.receiveShadow=true;for(const m of Array.isArray(o.material)?o.material:[o.material])if(m.map)m.map.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());});spin.add(g);}
+  function addCognitiveBookTitle(chapter,label,coverColor){
+    const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=256;
+    const ctx=canvas.getContext('2d');ctx.fillStyle=coverColor;ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle='#17254c';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='700 94px Georgia, serif';
+    while(ctx.measureText(label).width>canvas.width-72){ctx.font=`700 ${parseInt(ctx.font,10)-2}px Georgia, serif`;}
+    ctx.fillText(label,canvas.width/2,canvas.height/2);
+    const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
+    const title=new THREE.Mesh(new THREE.PlaneGeometry(.78,.195),new THREE.MeshStandardMaterial({map:texture,roughness:.52,side:THREE.DoubleSide}));
+    title.name=`${label} title artwork`;title.position.set(0,.242,.28);title.rotation.x=-Math.PI/2;title.renderOrder=2;chapter.add(title);
+  }
+  function prepare(g){g.traverse(o=>{if(g===library&&o.userData.storyId){if(displayOnly&&o.userData.storyId==='procrastination')o.visible=false;chapterRoots.push({node:o,baseY:o.position.y,id:o.userData.storyId});if(displayOnly&&o.userData.storyId==='avoidance')addCognitiveBookTitle(o,'Overthinking','#227D7D');if(displayOnly&&o.userData.storyId==='perfectionism')addCognitiveBookTitle(o,'Self-Doubt','#B9505E');}if(o.userData.part==='doorHinge')door=o;if(!o.isMesh)return;o.castShadow=true;o.receiveShadow=true;for(const m of Array.isArray(o.material)?o.material:[o.material])if(m.map)m.map.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());});spin.add(g);}
   function ensureBook(){if(!renderer||book||loadingBook)return;loadingBook=true;bookFailed=false;syncPreview();new GLTFLoader().load(storybookAsset,g=>{loadingBook=false;if(disposed){release(g.scene);return;}book=g.scene;prepare(book);showSelection();},undefined,()=>{loadingBook=false;if(disposed)return;bookFailed=true;syncPreview();});}
   viewport.addEventListener('keydown',keyboard);
   if(renderer){

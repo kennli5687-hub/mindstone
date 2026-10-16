@@ -787,6 +787,89 @@ button:disabled {
   box-shadow: none;
 }
 
+/* Keep the cognitive shelf contained in the display; its source art is a wide
+   banner, so size and crop it like a cover instead of letting it fill the frame. */
+.viewer-frame.cognitive-book-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(14px, 2.5vh, 26px);
+  padding: clamp(14px, 3vw, 34px);
+  background: radial-gradient(ellipse at 52% 42%, #223a68 0%, #14254a 56%, #0b1737 100%);
+  border: 1px solid #637ba9;
+  color: #f8efd9;
+}
+
+.cognitive-book-display__heading {
+  color: #9ce7df;
+  font: 800 11px/1.2 system-ui, sans-serif;
+  letter-spacing: .18em;
+  text-align: center;
+}
+
+.cognitive-book-display__shelf {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(8px, 1.6vw, 20px);
+  width: min(100%, 920px);
+  perspective: 1000px;
+}
+
+.cognitive-book {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 300px;
+  padding: 7px;
+  overflow: hidden;
+  border: 1px solid #c4a36c;
+  border-radius: 7px 12px 12px 7px;
+  background: linear-gradient(110deg, #223655 0 8px, #304d72 8px 100%);
+  box-shadow: 5px 8px 0 #15243b, 8px 14px 22px #24314755;
+  color: #fff3dc;
+  transform: rotateY(-4deg);
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.cognitive-book:nth-child(2) { transform: translateY(-8px); }
+.cognitive-book:nth-child(3) { transform: rotateY(4deg); }
+
+.cognitive-book.is-selected {
+  outline: 3px solid #e3b751;
+  box-shadow: 6px 10px 0 #15243b, 0 0 25px #dcae5266;
+  transform: translateY(-10px) scale(1.025);
+}
+
+.cognitive-book > img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1.55 / 1;
+  border-radius: 3px 7px 7px 3px;
+  background: #f6eee0;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* The wide state banner embeds an oversized wordmark on its left side. */
+.cognitive-book--overthinking > img { object-position: right center; }
+
+.cognitive-book > strong {
+  display: block;
+  padding: 9px 3px 3px;
+  font: 700 clamp(12px, 1.4vw, 17px)/1.15 Georgia, serif;
+  text-align: center;
+}
+
+.cognitive-book--guide { background: linear-gradient(110deg, #795731 0 8px, #ad8349 8px 100%); }
+
+@media (max-width: 620px) {
+  .viewer-frame.cognitive-book-display { gap: 12px; padding: 12px; }
+  .cognitive-book-display__shelf { gap: 6px; }
+  .cognitive-book { padding: 4px; }
+  .cognitive-book > strong { padding-top: 6px; font-size: 11px; }
+}
+
 .avatar-viewer,
 .specimen-video {
   position: absolute;
@@ -1233,6 +1316,7 @@ button:disabled {
 
 .scenario-modal {
   width: min(820px, calc(100vw - 32px));
+  position: relative;
 }
 
 .scenario-book {
@@ -1297,7 +1381,16 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  flex-wrap: wrap;
 }
+
+.rowan-world-prompt { position:absolute;inset:0;z-index:20;display:grid;place-items:center;padding:24px;border-radius:18px;background:#101a43a8;backdrop-filter:blur(7px); }
+.rowan-world-prompt-card { position:relative;width:min(390px,calc(100vw - 64px));padding:34px 30px 30px;border:1px solid #f1d48d;border-radius:18px;background:linear-gradient(145deg,#1d2c60,#111c45);color:#fff1cd;text-align:center;box-shadow:0 22px 70px #05091899,inset 0 0 30px #e7c46f12; }
+.rowan-world-prompt-card p { margin:0 0 20px;font:normal 24px/1.25 Georgia,serif; }
+.rowan-prompt-close { position:absolute;top:8px;right:10px;width:32px;height:32px;padding:0;border:0;border-radius:50%;background:transparent;color:#e7d9b8;font-size:24px;cursor:pointer; }
+.rowan-enter-button { padding:14px 22px;border:1px solid #fff0bc;border-radius:11px;background:linear-gradient(135deg,#f7da92,#dfaa55);color:#2a2342;font-size:15px;font-weight:800;box-shadow:0 8px 24px #e2b75c3d;cursor:pointer; }
+.rowan-enter-button:hover { filter:brightness(1.06);transform:translateY(-1px); }
+.rowan-enter-button:focus-visible { outline:3px solid #d4ad60;outline-offset:3px; }
 
 .scenario-page-count {
   color: rgba(39, 31, 26, 0.62);

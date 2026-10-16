@@ -536,6 +536,21 @@
   transform: none;
 }
 
+.cognitive-comic-button {
+  flex: 0 0 auto;
+  padding: 11px 18px;
+  border: 1px solid #c4a36c;
+  border-radius: 999px;
+  background: #263d60;
+  color: #fff4dc;
+  font: 700 14px/1.2 system-ui, sans-serif;
+  cursor: pointer;
+  box-shadow: 0 5px 14px #24314735;
+}
+
+.cognitive-comic-button:hover { background: #35547c; }
+.cognitive-comic-button:focus-visible { outline: 3px solid #d9ad52; outline-offset: 3px; }
+
 @media (max-width: 759px) {
   .dashboard-layout .main-library-panel .category-list {
     display: grid !important;
@@ -557,3 +572,16 @@
     display: none !important;
   }
 }
+.atlas-display-only .atlas-topics,
+.atlas-display-only .atlas-detail,
+.atlas-display-only .atlas-door-control,
+.atlas-display-only .atlas-book-cue{display:none!important}
+.dashboard-layout .viewer-frame.moon-home.cognitive-home{background:#152248!important;border-color:#829cb43b}
+.cognitive-home .story-atlas{position:absolute;inset:0}
+.cognitive-home .moon-home-badge{padding:0;background:none;box-shadow:none;pointer-events:auto}
+.cognitive-home .cognitive-explore-button{display:block;width:min(480px,calc(100vw - 330px));min-height:60px;max-width:100%;padding:12px 17px;border:0;border-radius:10px;background:linear-gradient(135deg,#f5d77d,#c99a32);color:#172541;box-shadow:0 12px 30px #53380857;font-family:inherit;font-size:clamp(.82rem,1.05vw,1rem);font-weight:850;line-height:1.4;text-align:left;cursor:pointer}
+.cognitive-home .cognitive-comic-button{position:absolute;z-index:5;left:22px;bottom:104px;min-width:190px;min-height:64px;padding:14px 28px;border:0;border-radius:9px;background:linear-gradient(135deg,#f5d77d,#c99a32);color:#172541;box-shadow:0 10px 24px #53380857;font-family:inherit;font-size:1.15rem;font-weight:800;line-height:normal;cursor:pointer}
+.cognitive-home .cognitive-comic-button:hover,.cognitive-home .cognitive-explore-button:hover{background:linear-gradient(135deg,#ffe69a,#d9aa3d)}
+.cognitive-home .cognitive-book-actions{position:absolute;inset:0;z-index:4;pointer-events:none}
+.cognitive-home .cognitive-comic-button{pointer-events:auto}
+@media(max-width:759px){.cognitive-home .cognitive-explore-button{max-width:100%;padding:10px 12px}.cognitive-home .cognitive-comic-button{left:12px;bottom:92px}}

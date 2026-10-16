@@ -567,10 +567,28 @@ const scenarioComics = {
     "/assets/scenario-procrastination-6.png",
   ],
   perfectionism: "/assets/scenario-perfectionism.png",
-  overthinking: "/assets/scenario-overthinking.png",
+  overthinking: [
+    "/assets/overthinking-comic-1.jpg",
+    "/assets/overthinking-comic-2.jpg",
+    "/assets/overthinking-comic-3.jpg",
+    "/assets/overthinking-comic-4.jpg",
+    "/assets/overthinking-comic-5.jpg",
+    "/assets/overthinking-comic-6.jpg",
+    "/assets/overthinking-comic-7.jpg",
+    "/assets/overthinking-comic-8.jpg",
+  ],
   stress: "/assets/scenario-stress.png",
   anxiety: "/assets/scenario-anxiety.png",
-  self_doubt: "/assets/scenario-self-doubt.png",
+  self_doubt: [
+    "/assets/scenario-self-doubt-1.jpg",
+    "/assets/scenario-self-doubt-2.jpg",
+    "/assets/scenario-self-doubt-3.jpg",
+    "/assets/scenario-self-doubt-4.jpg",
+    "/assets/scenario-self-doubt-5.jpg",
+    "/assets/scenario-self-doubt-6.jpg",
+    "/assets/scenario-self-doubt-7.jpg",
+    "/assets/scenario-self-doubt-8.jpg",
+  ],
   insecurity: "/assets/scenario-insecurity.png",
   social_anxiety: "/assets/scenario-social-anxiety.png",
   fear_of_rejection: "/assets/scenario-fear-of-rejection.png",
@@ -878,8 +896,11 @@ const state = {
   quizAnswers: [],
   activeQuizQuestions: [],
   scenarioOpen: false,
+  scenarioComicId: null,
   scenarioPageIndex: 0,
+  scenarioWorldPrompt: false,
   exploreOpen: false,
+  exploreWorldId: 'mira',
   storyFromWorld: false,
 };
 
@@ -1550,20 +1571,23 @@ function toggleAutoRotate() {
   render();
 }
 
-function openScenario() {
+function openScenario(comicId = null) {
   rememberModalEntry();
   if (!state.selectedBlockerId) state.selectedBlockerId = 'avoidance';
-  if (!getScenarioPages(state.selectedBlockerId).length) return;
+  state.scenarioComicId = comicId ?? state.selectedBlockerId;
+  if (!getScenarioPages(state.scenarioComicId).length) return;
   state.exploreOpen = false;
   state.storyFromWorld = false;
   state.scenarioOpen = true;
-  state.scenarioPageIndex = state.selectedBlockerId === 'avoidance' ? readProgress().bookmark : 0;
+  state.scenarioPageIndex = state.scenarioComicId === 'avoidance' ? readProgress().bookmark : 0;
+  state.scenarioWorldPrompt = false;
   state.quizOpen = false;
   render();
 }
 
 function closeScenario() {
   state.scenarioOpen = false;
+  state.scenarioComicId = null;
   state.exploreOpen = state.storyFromWorld;
   state.storyFromWorld = false;
   state.scenarioPageIndex = 0;
@@ -1576,9 +1600,28 @@ function openExplore() {
   state.selectedBlockerId = "avoidance";
   state.selectedTreeId = getBestTreeForBlocker("avoidance");
   state.exploreOpen = true;
+  state.exploreWorldId = 'mira';
   state.quizOpen = false;
   state.scenarioOpen = false;
   render();
+}
+
+function openRowanWorld() {
+  state.scenarioOpen = false;
+  state.scenarioComicId = null;
+  state.scenarioPageIndex = 0;
+  state.scenarioWorldPrompt = false;
+  state.storyFromWorld = false;
+  state.exploreOpen = true;
+  state.exploreWorldId = 'rowan';
+  state.quizOpen = false;
+  render();
+}
+
+function continueFromRowanToNextStory() {
+  state.selectedBlockerId = 'self_doubt';
+  state.selectedTreeId = getBestTreeForBlocker('self_doubt');
+  openScenario('self_doubt');
 }
 
 function closeExplore() {
@@ -1589,17 +1632,31 @@ function closeExplore() {
 
 function changeScenarioPage(direction) {
   if (!state.scenarioOpen) return;
-  const pages = getScenarioPages(state.selectedBlockerId);
+  const pages = getScenarioPages(state.scenarioComicId ?? state.selectedBlockerId);
   if (!pages.length) return;
+  state.scenarioWorldPrompt = false;
   const nextPageIndex = Math.max(0, Math.min(state.scenarioPageIndex + direction, pages.length - 1));
   if (nextPageIndex === state.scenarioPageIndex) return;
   state.scenarioPageIndex = nextPageIndex;
   render();
 }
 
+function showRowanWorldPrompt() {
+  if (state.scenarioComicId !== 'overthinking' || state.scenarioPageIndex !== getScenarioPages('overthinking').length - 1) return;
+  state.scenarioWorldPrompt = true;
+  render();
+  document.querySelector('[data-scenario-action="enter-rowan-world"]')?.focus({ preventScroll: true });
+}
+
+function dismissRowanWorldPrompt() {
+  state.scenarioWorldPrompt = false;
+  render();
+}
+
 function goToScenarioPage(pageIndex) {
-  const pages = getScenarioPages(state.selectedBlockerId);
+  const pages = getScenarioPages(state.scenarioComicId ?? state.selectedBlockerId);
   if (!pages[pageIndex]) return;
+  state.scenarioWorldPrompt = false;
   state.scenarioPageIndex = pageIndex;
   render();
 }
@@ -1631,7 +1688,7 @@ function createApp() {
   }
   return `
     <div class="app-shell demo-shell">
-      <header class="dream-header"><a href="/" class="dream-brand" aria-label="Mindstone home"><img class="dream-brand-logo" src="/assets/mindstone-logo.svg" alt="" /><span class="dream-brand-wordmark">MINDSTONE</span></a><button data-action="browse-stories">Choose a story ↗</button></header>
+      <header class="dream-header"><a href="/" class="dream-brand" aria-label="Mindstone home"><img class="dream-brand-logo" src="/assets/mindstone-logo.svg" alt="" /><span class="dream-brand-wordmark">MINDSTONE</span></a></header>
       <div class="layout dashboard-layout">
         <aside class="panel library-panel main-library-panel stack">
           <div class="stage-header">
@@ -1697,10 +1754,9 @@ function createApp() {
 
         <main class="workspace-column">
           <section class="center-stage card stack viewer-stage">
-            <div class="viewer-frame moon-home">
-              <div class="moon-home-badge">Explore a living storybook where everyday obstacles become paths toward small, meaningful steps forward.</div>
-              <div class="story-atlas" data-story-atlas></div>
-            </div>
+            ${["overthinking", "self_doubt"].includes(state.selectedBlockerId)
+              ? `<div class="viewer-frame moon-home cognitive-home"><div class="moon-home-badge"><button class="cognitive-explore-button" type="button" data-action="open-cognitive-world">Explore a living storybook where everyday obstacles become paths towards small, meaningful steps forward.</button></div><div class="story-atlas cognitive-story-atlas" data-story-atlas></div><div class="cognitive-book-actions"><button class="cognitive-comic-button" type="button" data-action="open-cognitive-comic">Open the door</button></div></div>`
+              : `<div class="viewer-frame moon-home"><div class="moon-home-badge">Explore a living storybook where everyday obstacles become paths toward small, meaningful steps forward.</div><div class="story-atlas" data-story-atlas></div></div>`}
           </section>
 
         </main>
@@ -1963,6 +2019,34 @@ function buildInfoPanel(selectedReference) {
 }
 
 function buildExploreModal() {
+  if (state.exploreWorldId === 'rowan') {
+    return `
+      <div class="explore-overlay" role="presentation">
+        <section class="explore-modal" role="dialog" aria-modal="true" aria-labelledby="explore-title">
+          <header class="explore-header">
+            <div>
+              <div class="explore-kicker">ROWAN AND THE LANTERN KEEPER / AFTER THE COMIC</div>
+              <div class="explore-title" id="explore-title">The Whispering Forest</div>
+            </div>
+            <button class="explore-close" type="button" data-explore-action="close" aria-label="Close Rowan's world">×</button>
+          </header>
+          <div class="explore-body rowan-world-body">
+            <div class="explore-world rowan-world">
+              <img src="/assets/overthinking-comic-8.jpg" alt="Rowan reaches the Lantern Keeper's home through a glowing forest." />
+              <div class="rowan-world-caption"><span>THE LANTERN KEEPER'S REFUGE</span><strong>One step at a time.</strong></div>
+            </div>
+            <aside class="explore-panel rowan-world-panel">
+              <small>ROWAN'S WORLD</small>
+              <h2>A path appears as you walk it.</h2>
+              <p>Rowan made it through the forest without knowing every turn ahead. Take a breath, choose one small next step, and let the rest of the path unfold.</p>
+              <div class="rowan-world-note">You don’t need to solve the whole journey before you begin.</div>
+              <button type="button" data-explore-action="next-story">Continue to Self-Doubt →</button>
+            </aside>
+          </div>
+        </section>
+      </div>
+    `;
+  }
   return `
     <div class="explore-overlay" role="presentation">
       <section class="explore-modal" role="dialog" aria-modal="true" aria-labelledby="explore-title">
@@ -1985,9 +2069,10 @@ function buildExploreModal() {
 }
 
 function buildScenarioModal() {
-  if (state.selectedBlockerId === 'avoidance') return `<div class="novel-overlay"><section class="novel-modal" role="dialog" aria-modal="true" aria-label="${state.storyFromWorld ? 'Legacy exploration clue' : 'Before we meet Mira'}" data-story-reader></section></div>`;
-  const blocker = getBlocker(state.selectedBlockerId);
-  const comicPages = getScenarioPages(state.selectedBlockerId);
+  const comicId = state.scenarioComicId ?? state.selectedBlockerId;
+  if (comicId === 'avoidance') return `<div class="novel-overlay"><section class="novel-modal" role="dialog" aria-modal="true" aria-label="${state.storyFromWorld ? 'Legacy exploration clue' : 'Before we meet Mira'}" data-story-reader></section></div>`;
+  const blocker = getBlocker(comicId);
+  const comicPages = getScenarioPages(comicId);
   const comicPath = comicPages[state.scenarioPageIndex] ?? comicPages[0];
   const hasMultiplePages = comicPages.length > 1;
   const isFirstPage = state.scenarioPageIndex === 0;
@@ -2001,7 +2086,7 @@ function buildScenarioModal() {
         <div class="quiz-header">
           <div>
             <div class="detail-label">Scenario</div>
-            <div class="title" id="scenario-title">${blocker.name}</div>
+            <div class="title" id="scenario-title">${comicId === "overthinking" ? "The Thousand Paths of Rowan" : blocker.name}</div>
           </div>
           <button class="quiz-close" type="button" data-scenario-action="close" aria-label="Close scenario">x</button>
         </div>
@@ -2011,12 +2096,12 @@ function buildScenarioModal() {
               ? `<button class="scenario-page-button previous" type="button" data-scenario-action="previous" aria-label="Previous page" ${isFirstPage ? "disabled" : ""}>‹</button>`
               : ""
           }
-          <button class="scenario-page" type="button" data-scenario-action="next" aria-label="Next scenario page" ${isLastPage ? "disabled" : ""}>
+          <button class="scenario-page" type="button" data-scenario-action="next" aria-label="Next scenario page" ${isLastPage && comicId !== 'overthinking' ? "disabled" : ""}>
             <img class="scenario-comic" src="${comicPath}" alt="${blocker.name} comic page ${state.scenarioPageIndex + 1}" />
           </button>
           ${
             hasMultiplePages
-              ? `<button class="scenario-page-button next" type="button" data-scenario-action="next" aria-label="Next page" ${isLastPage ? "disabled" : ""}>›</button>`
+              ? `<button class="scenario-page-button next" type="button" data-scenario-action="next" aria-label="${isLastPage && comicId === 'overthinking' ? "Finish comic" : "Next page"}" ${isLastPage && comicId !== 'overthinking' ? "disabled" : ""}>›</button>`
               : ""
           }
         </div>
@@ -2042,6 +2127,7 @@ function buildScenarioModal() {
               </div>`
             : ""
         }
+        ${state.scenarioWorldPrompt && comicId === 'overthinking' ? `<div class="rowan-world-prompt" role="dialog" aria-modal="true" aria-labelledby="rowan-world-prompt-title"><div class="rowan-world-prompt-card"><button class="rowan-prompt-close" type="button" data-scenario-action="dismiss-world" aria-label="Close prompt">×</button><p id="rowan-world-prompt-title">Ready to step into Rowan's story?</p><button class="rowan-enter-button" type="button" data-scenario-action="enter-rowan-world">Enter Rowan's World?</button></div></div>` : ''}
       </section>
     </div>
   `;
@@ -2317,13 +2403,9 @@ function bindEvents() {
       if (action === "return-crossroads") returnToCrossroads();
       if (action === "start-game") startGame();
       if (action === "start-avoidance") { state.selectedBlockerId = 'avoidance'; openScenario(); }
-      if (action === "browse-stories") {
-        const topic = app.querySelector('[data-atlas-topic][aria-pressed="true"]') || app.querySelector('[data-atlas-topic]');
-        topic?.focus({preventScroll:true});
-        const feedback = app.querySelector('[data-chapter-feedback]');
-        if (feedback) feedback.textContent = 'Choose a psychological topic to begin';
-      }
+      if (action === "open-cognitive-world") openExplore();
       if (action === "open-quiz") openQuiz();
+      if (action === "open-cognitive-comic") { openScenario('overthinking'); return; }
       if (action === "open-scenario" || action === "open-explore") {
         if (!state.selectedBlockerId || (action === 'open-explore' && state.selectedBlockerId !== 'avoidance')) {
           const feedback = app.querySelector('[data-chapter-feedback]');
@@ -2377,14 +2459,20 @@ function bindEvents() {
       const action = button.dataset.scenarioAction;
       if (action === "close") closeScenario();
       if (action === "previous") changeScenarioPage(-1);
-      if (action === "next") changeScenarioPage(1);
+      if (action === "next") {
+        if (state.scenarioComicId === 'overthinking' && state.scenarioPageIndex === getScenarioPages('overthinking').length - 1) showRowanWorldPrompt();
+        else changeScenarioPage(1);
+      }
       if (action === "page") goToScenarioPage(Number(button.dataset.scenarioPage));
+      if (action === "enter-rowan-world") openRowanWorld();
+      if (action === "dismiss-world") dismissRowanWorldPrompt();
     });
   });
 
   document.querySelectorAll("[data-explore-action]").forEach((button) => {
     button.addEventListener("click", () => {
       if (button.dataset.exploreAction === "close") closeExplore();
+      if (button.dataset.exploreAction === "next-story" && state.exploreWorldId === 'rowan') continueFromRowanToNextStory();
     });
   });
 }
@@ -2400,9 +2488,12 @@ function render() {
   bindEvents();
   topicPickerHandle = mountMobileTopicPicker(app,{onChoose:choosePath});
   const atlas = app.querySelector('[data-story-atlas]');
-  if (atlas && !state.scenarioOpen && !state.exploreOpen) atlasHandle = loadStoryAtlas(atlas, {initialTopic:state.selectedBlockerId,onSelect(id){state.selectedBlockerId=id;updateExploreAvailability();},onStoryPrepare(){preloadAvoidanceScenarioComic();},onStory(){state.selectedBlockerId='avoidance';openScenario();}});
+  if (atlas && !state.scenarioOpen && !state.exploreOpen) {
+    const cognitiveDisplay = atlas.classList.contains('cognitive-story-atlas');
+    atlasHandle = loadStoryAtlas(atlas, cognitiveDisplay ? {displayOnly:true} : {initialTopic:state.selectedBlockerId,onSelect(id){state.selectedBlockerId=id;updateExploreAvailability();},onStoryPrepare(){preloadAvoidanceScenarioComic();},onStory(){state.selectedBlockerId='avoidance';openScenario();}});
+  }
   updateExploreAvailability();
-  if (state.exploreOpen) mountFogRoom();
+  if (state.exploreOpen && state.exploreWorldId !== 'rowan') mountFogRoom();
   const reader = app.querySelector('[data-story-reader]');
   if (reader) storyHandle = (state.storyFromWorld ? createStoryReader : createMoonstoneReader)(reader, {page:state.scenarioPageIndex, fromWorld:state.storyFromWorld, onClose:closeScenario, onWorld:openExplore, onGuideExplore:openExplore});
   const dashboard = app.querySelector('.dashboard-layout');

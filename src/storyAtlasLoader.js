@@ -3,6 +3,7 @@ import {createLatestTask} from './latestTask.js';
 
 // The homepage can paint and navigate without downloading/parsing Three first.
 export function loadStoryAtlas(host,options={},loadModule=()=>import('./storyAtlas.js')){
+  host.classList.toggle('atlas-display-only',!!options.displayOnly);
   const gate=createLatestTask();
   let selected=options.initialTopic??null,preview=null,disposed=false;
   host.innerHTML=`<div class="atlas-viewport"><img class="atlas-poster" src="/assets/story-library-poster.png" alt="Three clothbound books, each introducing a different psychological story."><span class="atlas-loading" role="status">Loading interactive books…</span><span class="atlas-eyebrow">THE STORY LIBRARY</span></div><div class="atlas-topics" role="group" aria-label="Choose a psychological pattern">${atlasTopics.map((t,i)=>`<button type="button" data-atlas-topic="${i}" aria-pressed="${t.id===selected}">${t.name}</button>`).join('')}</div><div class="atlas-detail" aria-live="polite"><span class="atlas-status">STORIES ARE AVAILABLE WHILE 3D LOADS</span><p>Choose a topic, then use Scenario below to begin.</p></div>`;

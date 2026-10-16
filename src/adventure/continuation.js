@@ -20,9 +20,9 @@ export function createContinuation(container,panel,options={}){
   let storage;
   try{storage=options.storage??localStorage;storage.setItem(key,'0');}catch{}
   sessionDone=0;
-  let chapter=Math.min(sessionDone,2),done=sessionDone,disposed=false,raf,last=0,active=false,feedback='',letterText='',nextGamePlaceholder=false,buildingGameActive=false,selected=0,pieces=[],board=[],placed=0,deferred=false,task=0,lane=1,distance=0,speed=.8,paused=true,builderSelected=0,builderComplete=false,builderSubmitted=false,buildCount=0,rainCollected=0;
+  let chapter=Math.min(sessionDone,2),done=sessionDone,disposed=false,raf,last=0,active=false,feedback='',letterText='',nextGamePlaceholder=false,buildingGameActive=false,selected=0,pieces=[],board=[],placed=0,deferred=false,task=0,lane=1,distance=0,speed=.8,paused=true,builderSelected=0,builderComplete=false,builderSubmitted=false,openedChests=[false,false,false],buildCount=0,rainCollected=0;
   let renderer,replaying=false;
-  let interludeReader=null,interludeOverlay=null;
+  let interludeReader=null,interludeOverlay=null,videoRewardOverlay=null,videoRewardTimer=null,openingChest=null,rewardChestFocus=null;
   const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
   try{renderer=new THREE.WebGLRenderer({antialias:true});}catch{panel.innerHTML='<h2>3D is unavailable</h2><p>Please use a WebGL-capable browser. Your comic remains available in Scenario.</p>';return {destroy(){}};}
   renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.setClearColor('#172754');
@@ -31,6 +31,7 @@ export function createContinuation(container,panel,options={}){
   renderer.shadowMap.autoUpdate=false;
   container.replaceChildren(renderer.domElement);renderer.domElement.tabIndex=0;renderer.domElement.setAttribute('aria-label','Mira’s world. Drag to look around. Use the activity below to continue.');
   const rainEncouragement=document.createElement('div');rainEncouragement.className='mira-rain-encouragement';rainEncouragement.hidden=true;rainEncouragement.setAttribute('aria-live','polite');rainEncouragement.innerHTML='<strong>Raindrops collected <span data-rain-score>0</span></strong><span data-rain-message>Every drop counts. Move Mira to catch one.</span>';container.append(rainEncouragement);
+  const rewardRoom=document.createElement('div');rewardRoom.className='mira-reward-room';rewardRoom.hidden=true;rewardRoom.setAttribute('aria-label','Castle reward room');container.append(rewardRoom);
   const scene=new THREE.Scene(),perspectiveCamera=new THREE.PerspectiveCamera(45,1,.1,100);perspectiveCamera.position.set(7,6,9);const bucketCamera=new THREE.OrthographicCamera(-4.5,4.5,3,-3,.1,100);bucketCamera.position.set(0,1.35,12);bucketCamera.lookAt(0,1.35,0);let camera=perspectiveCamera;
   const controls=new OrbitControls(perspectiveCamera,renderer.domElement);controls.target.set(0,1,0);controls.maxDistance=20;controls.minDistance=4;controls.maxPolarAngle=1.4;
   scene.add(new THREE.HemisphereLight('#c9ddff','#5e4266',1.45));
@@ -56,6 +57,11 @@ export function createContinuation(container,panel,options={}){
     {name:'Long block',shape:[1.1,.55,.55],color:'#c18a66'},
     {name:'Tall block',shape:[.55,1.1,.55],color:'#d6b46f'},
     {name:'Blue block',shape:[.55,.55,.55],color:'#536eaa'},
+  ];
+  const chestRewards=[
+    {title:'Procrastination',src:'/assets/reward-videos/procrastination.mp4'},
+    {title:'Perfectionism',src:'/assets/reward-videos/perfectionism.mp4'},
+    {title:'Avoidance',src:'/assets/reward-videos/avoidance.mp4'},
   ];
   const placedBlocks=[];
   const buildRaycaster=new THREE.Raycaster();
@@ -132,6 +138,30 @@ export function createContinuation(container,panel,options={}){
     interludeOverlay?.remove();interludeOverlay=null;
     panel.querySelector('[data-do="next-game"], [data-do="start-building"]')?.focus({preventScroll:true});
   }
+  function closeRewardVideo(restoreFocus=true){
+    if(videoRewardTimer){clearTimeout(videoRewardTimer);videoRewardTimer=null;}
+    const video=videoRewardOverlay?.querySelector('video');video?.pause();if(video)video.removeAttribute('src');
+    videoRewardOverlay?.remove();videoRewardOverlay=null;
+    const chest=rewardChestFocus;openingChest=null;rewardChestFocus=null;
+    if(restoreFocus&&chest!==null)rewardRoom.querySelector(`[data-chest="${chest}"]`)?.focus({preventScroll:true});
+  }
+  function showChestReward(index){
+    const reward=chestRewards[index];if(!reward||disposed)return;
+    videoRewardOverlay=document.createElement('div');videoRewardOverlay.className='novel-overlay mira-reward-video-overlay';
+    videoRewardOverlay.innerHTML='<section class="mira-reward-video" role="dialog" aria-modal="true" aria-labelledby="mira-reward-video-title"><header><div><small>CASTLE REWARD</small><h2 id="mira-reward-video-title"></h2></div><button type="button" data-reward-close aria-label="Close reward video">×</button></header><video controls autoplay playsinline preload="auto"></video><p>A little story for the work you put in.</p></section>';
+    const title=videoRewardOverlay.querySelector('h2'),video=videoRewardOverlay.querySelector('video'),closeButton=videoRewardOverlay.querySelector('[data-reward-close]');
+    title.textContent=reward.title;video.src=reward.src;video.addEventListener('error',()=>{const note=videoRewardOverlay?.querySelector('p');if(note)note.textContent='This video could not be loaded. You can still close this reward and continue.';},{once:true});
+    closeButton.addEventListener('click',()=>closeRewardVideo());
+    videoRewardOverlay.addEventListener('click',event=>{if(event.target===videoRewardOverlay)closeRewardVideo();});
+    videoRewardOverlay.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();closeRewardVideo();}});
+    document.body.append(videoRewardOverlay);closeButton.focus({preventScroll:true});
+    const playAttempt=video.play();if(playAttempt?.catch)playAttempt.catch(()=>{});
+  }
+  function openChestReward(index){
+    if(!builderSubmitted||openingChest!==null||!chestRewards[index])return;
+    openingChest=index;rewardChestFocus=index;openedChests[index]=true;render();
+    videoRewardTimer=setTimeout(()=>{videoRewardTimer=null;openingChest=null;render();showChestReward(index);},520);
+  }
   function openComicInterlude({pages,ariaLabel,altPrefix,finalPrompt,finalActionLabel,onFinalAction}){
     if(interludeReader)return;
     interludeOverlay=document.createElement('div');interludeOverlay.className='novel-overlay';
@@ -150,7 +180,7 @@ export function createContinuation(container,panel,options={}){
     openComicInterlude({pages:perfectionismComicPages,ariaLabel:'Before the building game',altPrefix:'Mira and the model castle',finalPrompt:'Ready to build a place for Mira?',finalActionLabel:'Continue to the building game',onFinalAction(){showBuildingGame(true);render();}});
   }
   function showBuildingGame(show){
-    buildingGameActive=show;nextGamePlaceholder=true;if(show){clearMiraMovement();world.visible=false;bucketGame.visible=false;scene.remove(world,bucketGame);buildingWorkspace.visible=true;for(const block of placedBlocks){buildingWorkspace.remove(block);block.geometry.dispose();block.material.dispose();}placedBlocks.length=0;buildCount=0;builderComplete=false;builderSubmitted=false;builderSelected=0;}
+    buildingGameActive=show;nextGamePlaceholder=true;if(show){clearMiraMovement();world.visible=false;bucketGame.visible=false;scene.remove(world,bucketGame);buildingWorkspace.visible=true;for(const block of placedBlocks){buildingWorkspace.remove(block);block.geometry.dispose();block.material.dispose();}placedBlocks.length=0;buildCount=0;builderComplete=false;builderSubmitted=false;openedChests=[false,false,false];builderSelected=0;}
     rainEncouragement.hidden=show;
     camera=perspectiveCamera;controls.enabled=!show;
     if(show){camera.position.set(4.2,5.1,6.5);controls.target.set(0,.1,0);sun.position.set(-3,9,5);sun.target.position.set(0,0,0);renderer.domElement.style.touchAction='none';renderer.domElement.style.cursor='crosshair';renderer.domElement.setAttribute('aria-label','Building workspace. Left-click to place blocks, middle-drag to pan, and right-drag to rotate the view.');}
@@ -212,13 +242,15 @@ export function createContinuation(container,panel,options={}){
   function complete(){if(done<=chapter){done=chapter+1;sessionDone=done;try{storage?.setItem(key,String(done));}catch{}}feedback=['Pen and paper are ready.','The letter is written.','The letter is sent.'][chapter];replaying=false;active=false;paused=true;if(walk)walk.paused=true;render();}
   function render(){
     const c=chapters[chapter],solved=done>chapter&&!replaying;
+    rewardRoom.hidden=!(nextGamePlaceholder&&buildingGameActive&&builderSubmitted);
     if(nextGamePlaceholder){
       if(!buildingGameActive){
         panel.innerHTML=`<div class="mira-panel mira-next-game"><small>MIRA’S NEXT STEP</small><h2>Mira and the bucket</h2><p>Move Mira along the path to catch the falling raindrops.</p><div class="mira-movement-controls" aria-label="Move Mira"><button type="button" data-move="left" aria-label="Hold to move Mira left">←</button><span>Hold to move</span><button type="button" data-move="right" aria-label="Hold to move Mira right">→</button></div><p class="mira-movement-hint">Use these buttons, ← / →, or A / D.</p><div class="mira-rain-counter" aria-live="polite">Raindrops collected <strong data-rain-count>${rainCollected}</strong></div><p class="mira-rain-gate" role="status">${rainCollected<3?`Collect ${3-rainCollected} more raindrop${3-rainCollected===1?'':'s'} to unlock the castle.`:'Three raindrops collected. The building game is unlocked.'}</p><div class="mira-next-game-art" aria-hidden="true">✧</div><button data-do="start-building" ${rainCollected<3?'disabled':''}>${rainCollected<3?'Collect 3 raindrops to unlock':'Continue to the building game →'}</button><button data-do="back-to-letter">Back to Mira’s story</button></div>`;
         return;
       }
       if(builderSubmitted){
-        panel.innerHTML=`<div class="mira-panel mira-builder mira-builder-submitted"><small>CASTLE SUBMITTED</small><h2>A place for Mira</h2><p role="status">✧ Your castle is complete. It doesn’t need to be perfect to be worth sharing.</p><button data-do="continue-after-build">Continue</button></div>`;
+        rewardRoom.innerHTML=`<div class="mira-reward-room__window" aria-hidden="true"><span>☾</span><i>✦</i></div><div class="mira-reward-room__shelf mira-reward-room__shelf--left" aria-hidden="true"><i>✦</i><i>✧</i><i>☾</i></div><div class="mira-reward-room__shelf mira-reward-room__shelf--right" aria-hidden="true"><i>☾</i><i>✧</i><i>✦</i></div><div class="mira-reward-room__lamp mira-reward-room__lamp--left" aria-hidden="true">✧</div><div class="mira-reward-room__lamp mira-reward-room__lamp--right" aria-hidden="true">✧</div><header class="mira-reward-room__heading"><small>CASTLE COMPLETE</small><h2>Choose a chest</h2><p>Your reward is waiting inside.</p></header><div class="mira-reward-chests" role="group" aria-label="Choose one of three castle reward chests">${openedChests.map((opened,i)=>`<button class="mira-reward-chest ${opened?'is-open':''} ${openingChest===i?'is-opening':''}" data-chest="${i}" aria-label="${opened?`Play chest ${i+1} story reward`:`Open chest ${i+1}`}" aria-pressed="${opened}"><span class="mira-chest-art" aria-hidden="true"><span class="mira-chest-lid"></span><span class="mira-chest-body"></span><span class="mira-chest-latch"></span></span><strong>Chest ${i+1}</strong><small>${opened?'Story reward':'Click to open'}</small></button>`).join('')}</div><div class="mira-reward-room__floor" aria-hidden="true"></div>`;
+        panel.innerHTML=`<div class="mira-panel mira-builder mira-builder-submitted"><small>CASTLE SUBMITTED · REWARD</small><h2>A reward for you</h2><p>Your castle is complete. Choose one of the three chests in the main display to reveal a story reward.</p><button data-do="continue-after-build">Continue</button></div>`;
         return;
       }
       panel.innerHTML=`<div class="mira-panel mira-builder"><small>FINAL GAME · BUILDING</small><h2>Build a castle for Mira</h2><p>Use the blocks to make a castle of your own. Start with a base, add walls, then build upward for towers. Place at least three blocks, then submit your castle to continue.</p><div class="mira-castle-reference" role="img" aria-label="A simple castle reference with a base, walls, and two towers"><span>CASTLE REFERENCE</span><svg viewBox="0 0 220 92" aria-hidden="true"><g fill="#536eaa" stroke="#293765" stroke-width="2"><rect x="31" y="60" width="158" height="22" rx="2"/><rect x="49" y="42" width="122" height="20" rx="2"/><rect x="61" y="24" width="22" height="20" rx="2"/><rect x="137" y="24" width="22" height="20" rx="2"/><rect x="99" y="48" width="22" height="34" rx="10"/><rect x="57" y="11" width="30" height="14"/><path d="M57 11 72 1l15 10z"/><rect x="133" y="11" width="30" height="14"/><path d="m133 11 15-10 15 10z"/></g><g fill="#f2d99a"><rect x="68" y="30" width="6" height="8" rx="3"/><rect x="145" y="30" width="6" height="8" rx="3"/></g></svg><small>BASE · WALLS · TOWERS</small></div><h3 class="mira-builder-heading">Blocks</h3><div class="mira-builder-blocks">${builderBlocks.map((block,i)=>`<button class="mira-builder-block" data-build-block="${i}" aria-pressed="${builderSelected===i}"><span class="mira-builder-swatch" style="--block-color:${block.color}" aria-hidden="true"></span><span>${block.name}</span></button>`).join('')}</div><p role="status">${buildCount} block${buildCount===1?'':'s'} placed. ${buildCount<3?'Place at least three blocks to unlock submit.':''}</p><div class="mira-builder-actions"><button data-do="clear-build" ${buildCount?'':'disabled'}>Clear workspace</button><button data-do="finish-build" ${buildCount<3?'disabled':''}>Submit castle</button></div><button data-do="back-to-bucket">Back to Mira and the bucket</button></div>`;
@@ -246,6 +278,7 @@ export function createContinuation(container,panel,options={}){
     if(b.dataset.buildBlock!==undefined&&!builderSubmitted){builderSelected=Number(b.dataset.buildBlock);render();}
     if(a==='clear-build'&&!builderSubmitted){for(const block of placedBlocks){buildingWorkspace.remove(block);block.geometry.dispose();block.material.dispose();}placedBlocks.length=0;buildCount=0;builderComplete=false;visualRevision++;renderSignature='';render();}
     if(a==='finish-build'&&buildCount>=3&&!builderSubmitted){builderComplete=true;builderSubmitted=true;render();}
+    if(b.dataset.chest!==undefined){openChestReward(Number(b.dataset.chest));return;}
     if(a==='continue-after-build'&&builderSubmitted){options.onComplete?.();options.onClose?.();}
     if(a==='replay'){replaying=true;done=0;sessionDone=0;chapter=0;letterText='';try{storage?.setItem(key,'0');}catch{}replaying=false;scenery();render();}
     if(a==='reset-game'){board.fill(0);placed=0;task=0;deferred=false;feedback='';render();}
@@ -317,5 +350,6 @@ export function createContinuation(container,panel,options={}){
     raf=requestAnimationFrame(loop);
   }
   reset();raf=requestAnimationFrame(loop);
-  return {destroy(){disposed=true;closeProcrastinationStory();cancelAnimationFrame(raf);observer.disconnect();panel.removeEventListener('click',click);panel.removeEventListener('input',input);panel.removeEventListener('pointerdown',movementPointerDown);window.removeEventListener('keydown',keydown);window.removeEventListener('keyup',keyup);window.removeEventListener('pointerup',movementPointerUp);window.removeEventListener('pointercancel',movementPointerUp);window.removeEventListener('blur',clearMiraMovement);renderer.domElement.removeEventListener('pointerdown',buildingPointerDown);renderer.domElement.removeEventListener('pointermove',buildingPointerMove);renderer.domElement.removeEventListener('pointerup',buildingPointerUp);renderer.domElement.removeEventListener('pointercancel',buildingPointerUp);renderer.domElement.removeEventListener('contextmenu',buildingContextMenu);controls.dispose();release(scene);release(buildingScene);renderer.dispose();container.replaceChildren();panel.replaceChildren();}};
+  rewardRoom.addEventListener('click',click);
+  return {destroy(){disposed=true;closeProcrastinationStory();closeRewardVideo(false);cancelAnimationFrame(raf);observer.disconnect();panel.removeEventListener('click',click);rewardRoom.removeEventListener('click',click);panel.removeEventListener('input',input);panel.removeEventListener('pointerdown',movementPointerDown);window.removeEventListener('keydown',keydown);window.removeEventListener('keyup',keyup);window.removeEventListener('pointerup',movementPointerUp);window.removeEventListener('pointercancel',movementPointerUp);window.removeEventListener('blur',clearMiraMovement);renderer.domElement.removeEventListener('pointerdown',buildingPointerDown);renderer.domElement.removeEventListener('pointermove',buildingPointerMove);renderer.domElement.removeEventListener('pointerup',buildingPointerUp);renderer.domElement.removeEventListener('pointercancel',buildingPointerUp);renderer.domElement.removeEventListener('contextmenu',buildingContextMenu);controls.dispose();release(scene);release(buildingScene);renderer.dispose();container.replaceChildren();panel.replaceChildren();}};
 }
